@@ -1,0 +1,83 @@
+
+plugins {
+    id 'com.android.application'
+    id 'kotlin-android'
+    id 'dev.flutter.flutter-gradle-plugin'
+}
+// 本地编译注释以下代码
+// start
+def keystorePropertiesFile = rootProject.file('key.properties')
+def keystoreProperties = new Properties()
+keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
+// end
+android {
+    namespace 'com.nightmare.code'
+    compileSdk = flutter.compileSdkVersion
+    ndkVersion = flutter.ndkVersion
+
+    compileOptions {
+        sourceCompatibility = 17
+        targetCompatibility = 17
+    }
+
+    kotlinOptions {
+        jvmTarget = 17
+    }
+    signingConfigs {
+        // 本地编译注释以下代码
+        // start
+        release {
+            keyAlias keystoreProperties['keyAlias']
+            keyPassword keystoreProperties['keyPassword']
+            storeFile file(keystoreProperties['storeFile'])
+            storePassword keystoreProperties['storePassword']
+        }
+    // end
+    }
+
+    defaultConfig {
+        applicationId 'com.nightmare.code'
+        minSdk = 24
+        targetSdk = 35
+        versionCode = flutter.versionCode
+        versionName = flutter.versionName
+    }
+
+    lintOptions {
+        disable 'InvalidPackage'
+    }
+
+    buildTypes {
+        release {
+            signingConfig signingConfigs.release
+            minifyEnabled true
+            shrinkResources true
+        }
+        debug {
+            signingConfig signingConfigs.release
+            minifyEnabled false
+            shrinkResources false
+        }
+    }
+
+    project.android.applicationVariants.all { variant ->
+        variant.outputs.each { output ->
+            output.versionCodeOverride = flutter.versionCode
+        }
+    }
+
+    sourceSets {
+        main {
+            jniLibs.srcDirs = ['src/main/jniLibs']
+        }
+    }
+}
+
+flutter {
+    source '../..'
+}
+dependencies {
+    implementation 'androidx.constraintlayout:constraintlayout:2.1.4'
+
+// implementation fileTree(include: ['*.jar', '*aar'], dir: 'libs')
+}
