@@ -86,7 +86,7 @@ AstrBot-Android-App/
 
 ## 致谢 🙏
 
-- 感谢 [Code LFA](https://github.com/xxx/code_lfa) 提供的 Android 端 Ubuntu 容器运行环境，为本项目奠定了基础 🛠️。
+- 感谢 [Code LFA](https://github.com/nightmare-space/code_lfa) 提供的 Android 端 Ubuntu 容器运行环境，为本项目奠定了基础 🛠️。
 - 感谢 [AstrBot](https://docs.astrbot.app/) 团队开发的优秀聊天机器人框架，让移动端部署 AI 机器人成为可能 🚀。
 
 

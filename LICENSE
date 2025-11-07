@@ -1,0 +1,13 @@
+AstrBot-Android-App 许可证说明
+
+本项目采用多许可证组合，具体如下：
+
+### AstrBot 相关模块
+遵循 AGPL-v3 许可证（因深度集成 AstrBot 框架，需遵守其开源协议要求）。
+商业使用规则：若修改后用于商业性质网络服务，必须开源修改内容；若需闭源商业使用，需联系 community@astrbot.app 申请商业授权。
+AGPL-v3 完整许可证内容请参见：https://www.gnu.org/licenses/agpl-3.0.html
+
+
+### Code LFA 衍生的容器环境模块
+遵循 BSD-3-Clause 许可证（尊重原始 Code LFA 项目的开源协议）。
+BSD-3-Clause 完整许可证内容请参见：https://opensource.org/licenses/BSD-3-Clause
