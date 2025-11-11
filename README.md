@@ -3,9 +3,9 @@
 ## 项目简介 📝
 ![455484170-ffd99b6b-3272-4682-beaa-6fe74250f7d9](https://github.com/user-attachments/assets/77a04df3-9721-4e92-b2c3-975c11006167)
 
-AstrBot-Android-App 是一款基于 **[AstrBot](https://docs.astrbot.app/) 聊天机器人框架** 与 **Code LFA 的 Ubuntu 容器环境 & WebView框架** 打造的移动端解决方案，让你在 Android 设备上一键启动、配置并运行强大的多平台 LLM 聊天机器人。
+AstrBot-Android-App 是一款基于 **[AstrBot](https://docs.astrbot.app/) 聊天机器人框架** 、 **NapCatQQ消息适配器** 与 **Code LFA 的 Ubuntu 容器环境、模拟终端 & WebView框架** 打造的移动端解决方案，让你在 Android 设备上一键启动、配置并运行强大的多平台 LLM 聊天机器人。
 
-我们砍掉了原始 Code LFA 中与 code-server 相关的所有模块，深度集成 AstrBot 框架，借助其 Ubuntu 容器环境实现 AstrBot 在移动端的本地化运行，并通过内置 WebView 直接连接 AstrBot 浏览器仪表盘，让移动端部署 AI 聊天机器人变得前所未有的简单。
+我们移除了原始 Code LFA 中与 code-server 相关的所有模块，深度集成 AstrBot 框架，借助其 Ubuntu 容器环境实现 AstrBot 在移动端的本地化运行，并通过内置 WebView 直接连接 AstrBot 浏览器仪表盘，让移动端部署 AI 聊天机器人变得前所未有的简单。
 
 
 ## 核心特性 ✨
@@ -39,11 +39,12 @@ AstrBot-Android-App 是一款基于 **[AstrBot](https://docs.astrbot.app/) 聊�
 ```
 AstrBot-Android-App/
 ├── code_lfa-1.6.1/       # 基于 Code LFA 的 Ubuntu 容器环境基础 🐳
+├── git_repos/            # dart 依赖库，包括 Code LFA 作者创建的共享库
 ├── overrides/
 │   ├── assets/
 │   │   ├── AstrBot-4.5.4.zip   # AstrBot 框架核心资源包 📦
 │   │   └── napcat.sh           # napcat 消息平台适配器 (qq) 安装脚本 📜
-│   └── lib/                    # 替换的 lib 目录，包含 Dart 脚本 🔧
+│   └── lib/
 │       ├── config.dart
 │       ├── script.dart
 │       ├── terminal_controller.dart  
