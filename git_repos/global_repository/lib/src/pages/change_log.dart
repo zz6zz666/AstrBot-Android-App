@@ -90,7 +90,7 @@ class _ChangeLogPageState extends State<ChangeLogPage> {
             width: l(48),
             height: l(96),
             decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.primary.opacty02,
+              color: Theme.of(context).colorScheme.primary.opacity02,
               borderRadius: BorderRadius.circular(l(12)),
             ),
             child: Center(

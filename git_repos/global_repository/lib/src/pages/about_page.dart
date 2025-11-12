@@ -114,7 +114,7 @@ class AboutPage extends StatelessWidget {
                                 suffix: Text(
                                   '$appVersion($versionCode)',
                                   style: TextStyle(
-                                    color: colorScheme.onSurface.opacty06,
+                                    color: colorScheme.onSurface.opacity06,
                                     fontSize: context.l(16),
                                   ),
                                 ),
@@ -124,7 +124,7 @@ class AboutPage extends StatelessWidget {
                                 suffix: Text(
                                   'dev',
                                   style: TextStyle(
-                                    color: colorScheme.onSurface.opacty06,
+                                    color: colorScheme.onSurface.opacity06,
                                     fontSize: context.l(16),
                                   ),
                                 ),

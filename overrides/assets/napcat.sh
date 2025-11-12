@@ -29,7 +29,7 @@ function log() {
 }
 
 function check_sudo() {
-    if ! command -v sudo &> /dev/null; then
+    if ! command -v &> /dev/null; then
         log "sudo不存在, 请手动安装: \n Centos: dnf install -y sudo\n Debian/Ubuntu: apt-get install -y sudo\n"
         exit 1
     fi
@@ -38,7 +38,7 @@ function check_sudo() {
 function check_root() {
     if [[ $EUID -ne 0 ]]; then
         log "错误: 此脚本需要以 root 权限运行。"
-        log "请尝试使用 'sudo bash ${0}' 或切换到 root 用户后运行。"
+        log "请尝试使用 'bash ${0}' 或切换到 root 用户后运行。"
         exit 1
     fi
     log "脚本正在以 root 权限运行。"
@@ -73,11 +73,11 @@ function install_dependency() {
     detect_package_manager
 
     if [ "${package_manager}" = "apt-get" ]; then
-        sudo apt-get update -y -qq
-        sudo apt-get install -y -qq zip unzip jq curl xvfb screen xauth procps g++
+        apt-get update -y -qq
+        apt-get install -y -qq zip unzip jq curl xvfb screen xauth procps g++
     elif [ "${package_manager}" = "dnf" ]; then
-        sudo dnf install -y epel-release
-        sudo dnf install --allowerasing -y zip unzip jq curl xorg-x11-server-Xvfb screen procps-ng gcc-c++
+        dnf install -y epel-release
+        dnf install --allowerasing -y zip unzip jq curl xorg-x11-server-Xvfb screen procps-ng gcc-c++
     fi
     log "依赖安装成功..."
 }
@@ -125,12 +125,12 @@ function create_tmp_folder() {
         log "文件夹已存在且不为空(./napcat)，请重命名后重新执行脚本以防误删"
         exit 1
     fi
-    sudo mkdir -p ./napcat
+    mkdir -p ./napcat
 }
 
 function clean() {
     # 不再清理 ./napcat 文件夹
-    sudo rm -rf ./NapCat.Shell.zip
+    rm -rf ./NapCat.Shell.zip
 }
 
 function download_napcat() {
@@ -152,7 +152,7 @@ function download_napcat() {
     fi
 
     log "正在验证 ${default_file}..."
-    sudo unzip -t "${default_file}" > /dev/null 2>&1
+    unzip -t "${default_file}" > /dev/null 2>&1
     if [ $? -ne 0 ]; then
         log "文件验证失败, 请检查错误。"
         clean
@@ -160,7 +160,7 @@ function download_napcat() {
     fi
 
     log "正在解压 ${default_file}..."
-    sudo unzip -q -o -d ./napcat NapCat.Shell.zip
+    unzip -q -o -d ./napcat NapCat.Shell.zip
     if [ $? -ne 0 ]; then
         log "文件解压失败, 请检查错误。"
         clean
@@ -197,27 +197,27 @@ function install_linuxqq() {
 
     if [ "${package_manager}" = "dnf" ]; then
         if ! [ -f "QQ.rpm" ]; then
-            sudo curl -k -L -# "${qq_download_url}" -o QQ.rpm
+            curl -k -L -# "${qq_download_url}" -o QQ.rpm
             if [ $? -ne 0 ]; then
                 log "QQ下载失败"
                 exit 1
             fi
         fi
-        sudo dnf localinstall -y ./QQ.rpm
-        sudo rm -f QQ.rpm
+        dnf localinstall -y ./QQ.rpm
+        rm -f QQ.rpm
     elif [ "${package_manager}" = "apt-get" ]; then
         if ! [ -f "QQ.deb" ]; then
-            sudo curl -k -L -# "${qq_download_url}" -o QQ.deb
+            curl -k -L -# "${qq_download_url}" -o QQ.deb
             if [ $? -ne 0 ]; then
                 log "QQ下载失败"
                 exit 1
             fi
         fi
-        sudo apt-get install -f -y --allow-downgrades -qq ./QQ.deb
-        sudo apt-get install -y --allow-downgrades -qq libnss3
-        sudo apt-get install -y --allow-downgrades -qq libgbm1
-        sudo apt-get install -y --allow-downgrades -qq libasound2 || sudo apt-get install -y --allow-downgrades -qq libasound2t64
-        sudo rm -f QQ.deb
+        apt-get install -f -y --allow-downgrades -qq ./QQ.deb
+        apt-get install -y --allow-downgrades -qq libnss3
+        apt-get install -y --allow-downgrades -qq libgbm1
+        apt-get install -y --allow-downgrades -qq libasound2 || apt-get install -y --allow-downgrades -qq libasound2t64
+        rm -f QQ.deb
     fi
     log "LinuxQQ安装完成"
 }
@@ -262,7 +262,7 @@ function download_launcher_so() {
 
 clear
 log "NapCat Shell 安装脚本"
-check_sudo
+# check_sudo
 check_root
 install_dependency
 download_napcat
@@ -283,6 +283,5 @@ chmod +x launcher.sh
 log "启动步骤:"
 log "输入 Xvfb :1 -screen 0 1x1x8 +extension GLX +render > /dev/null 2>&1 &"
 log "输入 export DISPLAY=:1"
-log "输入 sudo su"
 log "输入 LD_PRELOAD=./libnapcat_launcher.so qq --no-sandbox"
-log "或直接运行 sudo bash ./launcher.sh 启动 NapCat Shell"
+log "或直接运行 bash ./launcher.sh 启动 NapCat Shell"

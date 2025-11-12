@@ -5,7 +5,7 @@ dependency_overrides:
     path: ../git_repos/empty_package/behavior_api
   global_repository:
     path: ../git_repos/global_repository
-  intl: 0.20.2
+  intl: ^0.20.2
   xterm:
     path: ../git_repos/xterm.dart
   settings:

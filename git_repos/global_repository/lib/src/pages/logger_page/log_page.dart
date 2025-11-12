@@ -148,7 +148,7 @@ class _LoggerViewState extends State<LoggerView> {
           Align(
             alignment: Alignment.topRight,
             child: NiCardButton(
-              color: Theme.of(context).colorScheme.primary.opacty02,
+              color: Theme.of(context).colorScheme.primary.opacity02,
               onTap: () {
                 List<LogEntity> logData = Log.defaultLogger.buffer;
                 if (logData.isEmpty) {

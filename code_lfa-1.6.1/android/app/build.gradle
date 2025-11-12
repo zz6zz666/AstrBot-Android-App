@@ -4,12 +4,12 @@ plugins {
     id 'kotlin-android'
     id 'dev.flutter.flutter-gradle-plugin'
 }
-// 本地编译注释以下代码
-// start
-def keystorePropertiesFile = rootProject.file('key.properties')
-def keystoreProperties = new Properties()
-keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
-// end
+// // 本地编译注释以下代码
+// // start
+// def keystorePropertiesFile = rootProject.file('key.properties')
+// def keystoreProperties = new Properties()
+// keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
+// // end
 android {
     namespace 'com.nightmare.code'
     compileSdk = flutter.compileSdkVersion
@@ -24,15 +24,15 @@ android {
         jvmTarget = 17
     }
     signingConfigs {
-        // 本地编译注释以下代码
-        // start
-        release {
-            keyAlias keystoreProperties['keyAlias']
-            keyPassword keystoreProperties['keyPassword']
-            storeFile file(keystoreProperties['storeFile'])
-            storePassword keystoreProperties['storePassword']
-        }
-    // end
+    //     // 本地编译注释以下代码
+    //     // start
+    //     release {
+    //         keyAlias keystoreProperties['keyAlias']
+    //         keyPassword keystoreProperties['keyPassword']
+    //         storeFile file(keystoreProperties['storeFile'])
+    //         storePassword keystoreProperties['storePassword']
+    //     }
+    // // end
     }
 
     defaultConfig {
@@ -49,12 +49,14 @@ android {
 
     buildTypes {
         release {
-            signingConfig signingConfigs.release
+            // signingConfig signingConfigs.release
+            signingConfig signingConfigs.debug
             minifyEnabled true
             shrinkResources true
         }
         debug {
-            signingConfig signingConfigs.release
+            // signingConfig signingConfigs.release
+            signingConfig signingConfigs.debug
             minifyEnabled false
             shrinkResources false
         }
