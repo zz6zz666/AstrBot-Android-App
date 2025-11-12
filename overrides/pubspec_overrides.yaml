@@ -2,13 +2,13 @@ dependency_overrides:
   permission_handler: ^11.3.1
   device_info_plus: ^10.1.2
   behavior_api:
-    path: ../../git_repos/empty_package/behavior_api
+    path: ../git_repos/empty_package/behavior_api
   global_repository:
-    path: ../../git_repos/global_repository
+    path: ../git_repos/global_repository
   intl: 0.20.2
   xterm:
-    path: ../../git_repos/xterm.dart
+    path: ../git_repos/xterm.dart
   settings:
-    path: ../../git_repos/settings
+    path: ../git_repos/settings
   flutter_pty:
-    path: ../../git_repos/flutter_pty
+    path: ../git_repos/flutter_pty
