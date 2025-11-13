@@ -137,8 +137,8 @@ install_napcat(){
     fi
     bash napcat.sh
     
-  echo "写入 onebot11.json默认配置文件"
-  cat > "$HOME/config/onebot11.json" <<'EOF'
+  echo "写入 onebot11.json 默认配置文件"
+  cat > "$HOME/napcat/config/onebot11.json" <<'EOF'
 {
   "network": {
     "httpServers": [],
@@ -147,7 +147,7 @@ install_napcat(){
     "websocketClients": [
       {
         "name": "WsClient",
-        "enable": false,
+        "enable": true,
         "url": "ws://localhost:6199/ws",
         "messagePostFormat": "array",
         "reportSelfMessage": false,
@@ -163,19 +163,20 @@ install_napcat(){
   "parseMultMsg": false
 }
 EOF
+    progress_echo "Napcat $L_INSTALLED"
   else
     progress_echo "Napcat $L_INSTALLED"
   fi
 
 }
 
-install_astrobot(){
-  local INSTALL_DIR="$HOME/Astrobot"
+install_astrbot(){
+  local INSTALL_DIR="$HOME/AstrBot"
   
   # 检查是否已安装
   if [ ! -d "$INSTALL_DIR" ]; then
     cd $HOME
-    progress_echo "Astrobot $L_NOT_INSTALLED，$L_INSTALLING..."
+    progress_echo "AstrBot $L_NOT_INSTALLED，$L_INSTALLING..."
     network_test
 
     # 克隆仓库（失败直接退出）
@@ -184,6 +185,9 @@ install_astrobot(){
       echo "克隆 AstrBot 仓库失败"
       exit 1
     fi
+    mkdir AstrBot/data
+    cp cmd_config.json AstrBot/data
+    echo "拷贝 cmd_config.json 默认配置文件"
   else
     progress_echo "AstrBot $L_INSTALLED"
   fi
@@ -210,4 +214,4 @@ install_napcat
 bump_progress
 bump_progress
 bump_progress
-install_astrobot
+install_astrbot

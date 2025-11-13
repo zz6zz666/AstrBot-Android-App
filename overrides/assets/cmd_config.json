@@ -1,0 +1,170 @@
+﻿{
+  "config_version": 2,
+  "platform_settings": {
+    "unique_session": false,
+    "rate_limit": {
+      "time": 60,
+      "count": 30,
+      "strategy": "stall"
+    },
+    "reply_prefix": "",
+    "forward_threshold": 1500,
+    "enable_id_white_list": true,
+    "id_whitelist": [],
+    "id_whitelist_log": true,
+    "wl_ignore_admin_on_group": true,
+    "wl_ignore_admin_on_friend": true,
+    "reply_with_mention": false,
+    "reply_with_quote": false,
+    "path_mapping": [],
+    "segmented_reply": {
+      "enable": false,
+      "only_llm_result": true,
+      "interval_method": "random",
+      "interval": "1.5,3.5",
+      "log_base": 2.6,
+      "words_count_threshold": 150,
+      "regex": ".*?[。？！~…]+|.+$",
+      "content_cleanup_rule": ""
+    },
+    "no_permission_reply": true,
+    "empty_mention_waiting": true,
+    "empty_mention_waiting_need_reply": true,
+    "friend_message_needs_wake_prefix": false,
+    "ignore_bot_self_message": false,
+    "ignore_at_all": false
+  },
+  "provider": [],
+  "provider_settings": {
+    "enable": true,
+    "default_provider_id": "",
+    "default_image_caption_provider_id": "",
+    "image_caption_prompt": "Please describe the image using Chinese.",
+    "provider_pool": [
+      "*"
+    ],
+    "wake_prefix": "",
+    "web_search": false,
+    "websearch_provider": "default",
+    "websearch_tavily_key": [],
+    "websearch_baidu_app_builder_key": "",
+    "web_search_link": false,
+    "display_reasoning_text": false,
+    "identifier": false,
+    "group_name_display": false,
+    "datetime_system_prompt": true,
+    "default_personality": "default",
+    "persona_pool": [
+      "*"
+    ],
+    "prompt_prefix": "{{prompt}}",
+    "max_context_length": -1,
+    "dequeue_context_length": 1,
+    "streaming_response": false,
+    "show_tool_use_status": false,
+    "unsupported_streaming_strategy": "realtime_segmenting",
+    "max_agent_step": 30,
+    "tool_call_timeout": 60
+  },
+  "provider_stt_settings": {
+    "enable": false,
+    "provider_id": ""
+  },
+  "provider_tts_settings": {
+    "enable": false,
+    "provider_id": "",
+    "dual_output": false,
+    "use_file_service": false
+  },
+  "provider_ltm_settings": {
+    "group_icl_enable": false,
+    "group_message_max_cnt": 300,
+    "image_caption": false,
+    "active_reply": {
+      "enable": false,
+      "method": "possibility_reply",
+      "possibility_reply": 0.1,
+      "whitelist": []
+    }
+  },
+  "content_safety": {
+    "also_use_in_response": false,
+    "internal_keywords": {
+      "enable": true,
+      "extra_keywords": []
+    },
+    "baidu_aip": {
+      "enable": false,
+      "app_id": "",
+      "api_key": "",
+      "secret_key": ""
+    }
+  },
+  "admins_id": [
+    "astrbot"
+  ],
+  "t2i": false,
+  "t2i_word_threshold": 150,
+  "t2i_strategy": "remote",
+  "t2i_endpoint": "",
+  "t2i_use_file_service": false,
+  "t2i_active_template": "base",
+  "http_proxy": "",
+  "no_proxy": [
+    "localhost",
+    "127.0.0.1",
+    "::1"
+  ],
+  "dashboard": {
+    "enable": true,
+    "username": "astrbot",
+    "password": "77b90590a8945a7d36c963981a307dc9",
+    "jwt_secret": "60cee8cf12978fcd66f66136a9bd0df4407e90c16bfd6590f8018b8c0bccf8a2",
+    "host": "0.0.0.0",
+    "port": 6185
+  },
+  "platform": [
+    {
+      "id": "pre-config",
+      "type": "aiocqhttp",
+      "enable": true,
+      "ws_reverse_host": "0.0.0.0",
+      "ws_reverse_port": 6199,
+      "ws_reverse_token": "kasdkfljsadhlskdjhasdlkfshdlafksjdhf"
+    }
+  ],
+  "platform_specific": {
+    "lark": {
+      "pre_ack_emoji": {
+        "enable": false,
+        "emojis": [
+          "Typing"
+        ]
+      }
+    },
+    "telegram": {
+      "pre_ack_emoji": {
+        "enable": false,
+        "emojis": [
+          "✍️"
+        ]
+      }
+    }
+  },
+  "wake_prefix": [
+    "/"
+  ],
+  "log_level": "INFO",
+  "pip_install_arg": "",
+  "pypi_index_url": "https://mirrors.aliyun.com/pypi/simple/",
+  "persona": [],
+  "timezone": "Asia/Shanghai",
+  "callback_api_base": "",
+  "default_kb_collection": "",
+  "plugin_set": [
+    "*"
+  ],
+  "kb_names": [],
+  "kb_fusion_top_k": 20,
+  "kb_final_top_k": 5
+}

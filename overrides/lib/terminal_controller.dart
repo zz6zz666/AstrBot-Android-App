@@ -291,7 +291,8 @@ EOF
     
     setProgress('复制 Ubuntu 系统镜像...');
     await AssetsUtils.copyAssetToPath('assets/${Config.ubuntuFileName}', '${RuntimeEnvir.homePath}/${Config.ubuntuFileName}');
-    await AssetsUtils.copyAssetToPath('assets/astrbot-startup.sh', '${RuntimeEnvir.homePath}/astrbot-startup.sh');
+    await AssetsUtils.copyAssetToPath('assets/astrbot-startup.sh', '$ubuntuPath/root/astrbot-startup.sh');
+    await AssetsUtils.copyAssetToPath('assets/cmd_config.json', '$ubuntuPath/root/cmd_config.json');
     bumpProgress();
     
     // 写入并执行脚本

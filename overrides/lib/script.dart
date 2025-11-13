@@ -127,19 +127,12 @@ EOF
 }
 ''';
 
-String copyStartupScript = r'''
-copy_startup_script(){
-  cp ~/astrbot-startup.sh $UBUNTU_PATH/root/astrbot-startup.sh
-}
-''';
-
 String commonScript = '''
 $common
 $changeUbuntuNobleSource
 $installUbuntu
 $installProotDistro
 $loginUbuntu
-$copyStartupScript
 clear_lines
 start_astrbot(){
   install_proot_distro
@@ -149,7 +142,6 @@ start_astrbot(){
   sleep 1
   bump_progress
 
-  copy_startup_script
   login_ubuntu "
     export TMPDIR='${RuntimeEnvir.tmpPath}';
     export L_NOT_INSTALLED='${S.current.uninstalled}';
