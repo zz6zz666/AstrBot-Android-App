@@ -44,7 +44,7 @@ packages:
   behavior_api:
     dependency: "direct main"
     description:
-      path: "../git_repos/empty_package/behavior_api"
+      path: "git_repos/empty_package/behavior_api"
       relative: true
     source: path
     version: "1.0.0"
@@ -205,7 +205,7 @@ packages:
   flutter_pty:
     dependency: "direct main"
     description:
-      path: "../git_repos/flutter_pty"
+      path: "git_repos/flutter_pty"
       relative: true
     source: path
     version: "0.4.2"
@@ -238,7 +238,7 @@ packages:
   global_repository:
     dependency: "direct main"
     description:
-      path: "../git_repos/global_repository"
+      path: "git_repos/global_repository"
       relative: true
     source: path
     version: "0.0.1"
@@ -477,7 +477,7 @@ packages:
   settings:
     dependency: "direct main"
     description:
-      path: "../git_repos/settings"
+      path: "git_repos/settings"
       relative: true
     source: path
     version: "0.0.1"
@@ -689,7 +689,7 @@ packages:
   xterm:
     dependency: "direct main"
     description:
-      path: "../git_repos/xterm.dart"
+      path: "git_repos/xterm.dart"
       relative: true
     source: path
     version: "4.0.0"
