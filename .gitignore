@@ -181,5 +181,4 @@ public
 .yarn/install-state.gz
 .pnp.*
 
-/build_output/
-/temp_build/
+key.properties
