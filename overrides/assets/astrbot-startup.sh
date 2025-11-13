@@ -2,6 +2,7 @@
 
 export UV_LINK_MODE=copy
 export UV_DEFAULT_INDEX="https://pypi.tuna.tsinghua.edu.cn/simple"
+export UV_PYTHON_INSTALL_MIRROR="https://ghfast.top/https://github.com/astral-sh/python-build-standalone/releases/download"
 
 progress_echo(){
   echo -e "\033[31m- $@\033[0m"
