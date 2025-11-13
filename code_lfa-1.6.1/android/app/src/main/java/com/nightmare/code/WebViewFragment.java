@@ -90,7 +90,7 @@ public class WebViewFragment extends Fragment {
                 return true;
             }
         });
-        mWebView.loadUrl("http://127.0.0.1:20000");
+        mWebView.loadUrl("http://0.0.0.0:6185");
         return mWebView;
     }
 

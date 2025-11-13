@@ -148,7 +148,7 @@ install_napcat(){
       {
         "name": "WsClient",
         "enable": false,
-        "url": "ws://localhost:6199",
+        "url": "ws://localhost:6199/ws",
         "messagePostFormat": "array",
         "reportSelfMessage": false,
         "reconnectInterval": 5000,
@@ -203,8 +203,11 @@ install_astrobot(){
 
 install_sudo_curl_git
 bump_progress
+bump_progress
 install_uv
 bump_progress
 install_napcat
+bump_progress
+bump_progress
 bump_progress
 install_astrobot

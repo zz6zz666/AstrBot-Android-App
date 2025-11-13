@@ -78,7 +78,7 @@ void openWebView() {
   _channel.invokeMethod('open_webview');
 }
 // 为了获取Apk So库路径，我们需要一个MethodChannel
-MethodChannel _channel = const MethodChannel('vscode_channel');
+MethodChannel _channel = const MethodChannel('astrbot_channel');
 
 /// 获取 Apk So 库路径
 /// Gets the path of the Apk So library

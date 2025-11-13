@@ -11,11 +11,18 @@ import 'config.dart';
 import 'generated/l10n.dart';
 import 'script.dart';
 import 'utils.dart';
+import 'package:flutter/material.dart'; // 引入Dialog等UI组件
 
 class HomeController extends GetxController {
   // bool vsCodeStaring = false;
   SettingNode privacySetting = 'privacy'.setting;
   Pty? pseudoTerminal;
+  Pty? napcatTerminal;
+
+	final RxBool _isQrcodeShowing = false.obs;
+  Dialog? _qrcodeDialog;
+  StreamSubscription? _qrcodeSubscription;
+
   late Terminal terminal = Terminal(
     maxLines: 10000,
     onResize: (width, height, pixelWidth, pixelHeight) {
@@ -30,7 +37,7 @@ class HomeController extends GetxController {
   File progressFile = File('${RuntimeEnvir.tmpPath}/progress');
   File progressDesFile = File('${RuntimeEnvir.tmpPath}/progress_des');
   double progress = 0.0;
-  double step = 8; // 修改为8个步骤（install_proot_distro, install_ubuntu, install_curl, network_test, install_uv, install_astrobot, install_napcat）
+  double step = 12.0;
   String currentProgress = '';
 
   // 进度 +1
@@ -53,6 +60,15 @@ class HomeController extends GetxController {
     update();
   }
 
+String command = '''bash ${RuntimeEnvir.binPath}/proot-distro login \\
+--bind /storage/emulated/0:/sdcard/ \\
+--bind \$TMPDIR:\$TMPDIR \\
+ubuntu --isolated <<EOF
+\$*
+bash launcher.sh
+EOF
+''';
+
   // 监听输出，当输出中包含启动成功的标志时，启动 Code Server
   // Listen for output and start the Code Server when the success flag is detected
   Future<void> astrBotStartWhenSuccessBind() async {
@@ -60,6 +76,11 @@ class HomeController extends GetxController {
     final Completer completer = Completer();
     Utf8Decoder decoder = const Utf8Decoder(allowMalformed: true);
     pseudoTerminal!.output.cast<List<int>>().transform(decoder).listen((event) async {
+			if(event.contains('Napcat ${S.current.installed}')){
+				napcatTerminal?.writeString('$command\n');
+				bumpProgress();
+			}
+
       if (event.contains('http://0.0.0.0:${Config.port}')) {
         Log.e(event);
         if (!completer.isCompleted) {
@@ -83,7 +104,79 @@ class HomeController extends GetxController {
       update();
     });
   }
+	
+	void initQrcodeListener() {
+		if (napcatTerminal == null) return;
 
+		_qrcodeSubscription = napcatTerminal!.output
+				.cast<List<int>>()
+				.transform(const Utf8Decoder(allowMalformed: true))
+				.listen((event) async {
+			// 先判断订阅是否已取消，避免重复处理
+			if (_qrcodeSubscription == null) return;
+
+			// 检测指令1显示二维码
+			if (event.contains('二维码已保存到') && !_isQrcodeShowing.value) {
+				_isQrcodeShowing.value = true;
+				final qrcodePath = '$ubuntuPath/root/napcat/cache/qrcode.png';
+				final qrcodeFile = File(qrcodePath);
+
+				if (await qrcodeFile.exists()) {
+					_qrcodeDialog = Dialog(
+						backgroundColor: Colors.white,
+						child: Padding(
+							padding: const EdgeInsets.all(16.0),
+							child: Column(
+								mainAxisSize: MainAxisSize.min,
+								children: [
+									const Text(
+										'请用手机QQ扫码登录',
+										style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+									),
+									const SizedBox(height: 16),
+									Image.file(
+										qrcodeFile,
+										width: 200,
+										height: 200,
+										fit: BoxFit.contain,
+									),
+								],
+							),
+						),
+					);
+
+					// 使用GetX的导航管理避免上下文问题
+					await Get.dialog(
+						_qrcodeDialog!,
+						barrierDismissible: false,
+					);
+
+					_isQrcodeShowing.value = false;
+					_qrcodeDialog = null;
+				} else {
+					Get.showSnackbar(GetSnackBar(
+						message: '二维码图片不存在：$qrcodePath',
+						duration: const Duration(seconds: 3),
+					));
+					_isQrcodeShowing.value = false;
+				}
+			}
+
+			// 检测指令2关闭二维码并取消监听
+			if (event.contains('配置加载') && _isQrcodeShowing.value) {
+				// 关闭对话框
+				if (_qrcodeDialog != null) {
+					Get.back();
+					_isQrcodeShowing.value = false;
+					_qrcodeDialog = null;
+				}
+				
+				// 取消订阅，后续不再监听任何指令
+				await _qrcodeSubscription?.cancel();
+				_qrcodeSubscription = null; // 置空标记已取消
+			}
+		});
+	}
 
   // 初始化环境，将动态库中的文件链接到数据目录
   // Init environment and link files from the dynamic library to the data directory
@@ -189,7 +282,8 @@ class HomeController extends GetxController {
     
     // 创建终端
     pseudoTerminal = createPTY(rows: terminal.viewHeight, columns: terminal.viewWidth);
-    
+    napcatTerminal = createPTY();
+
     // 复制必要的文件
     setProgress('复制 proot-distro...');
     await AssetsUtils.copyAssetToPath('assets/proot-distro.zip', '${RuntimeEnvir.homePath}/proot-distro.zip');
@@ -205,7 +299,10 @@ class HomeController extends GetxController {
     
     astrBotStartWhenSuccessBind();
     bumpProgress();
-    // 启动 AstrBot 安装和运行流程
+
+		initQrcodeListener();
+    napcatTerminal?.writeString('$command\n');
+
     startAstrBot(pseudoTerminal!);
 
   }

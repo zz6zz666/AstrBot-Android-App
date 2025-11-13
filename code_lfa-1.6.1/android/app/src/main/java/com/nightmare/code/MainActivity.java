@@ -30,7 +30,7 @@ public class MainActivity extends FragmentActivity {
         flutterFragment = (FlutterFragment) fragmentManager.findFragmentByTag(TAG_FLUTTER_FRAGMENT);
         FlutterEngine flutterEngine = new FlutterEngine(this, null, false);
         flutterEngine.getDartExecutor().executeDartEntrypoint(DartExecutor.DartEntrypoint.createDefault());
-        new MethodChannel(flutterEngine.getDartExecutor().getBinaryMessenger(), "vscode_channel").setMethodCallHandler((call, result) -> {
+        new MethodChannel(flutterEngine.getDartExecutor().getBinaryMessenger(), "astrbot_channel").setMethodCallHandler((call, result) -> {
             switch (call.method) {
                 case "open_webview": {
                     runOnUiThread(() -> {
