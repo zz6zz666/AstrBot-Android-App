@@ -24,7 +24,8 @@ install_sudo_curl_git(){
     progress_echo "curl $L_NOT_INSTALLED, $L_INSTALLING..."
     apt-get update
     apt-get install -y sudo
-    sudo apt-get install -y curl git
+    sudo apt-get install -y git
+    sudo apt-get install -y curl
   else
     progress_echo "curl $L_INSTALLED"
   fi
@@ -172,7 +173,10 @@ EOF
 
 install_astrbot(){
   local INSTALL_DIR="$HOME/AstrBot"
+  local CLONE_TEMP_DIR="$HOME/AstrBot_tmp"
   
+  rm -rf "$CLONE_TEMP_DIR"
+
   # 检查是否已安装
   if [ ! -d "$INSTALL_DIR" ]; then
     cd $HOME
@@ -181,14 +185,23 @@ install_astrbot(){
 
     # 克隆仓库（失败直接退出）
     echo "正在克隆 AstrBot 仓库..."
-    if ! git clone ${target_proxy:+${target_proxy}/}https://github.com/AstrBotDevs/AstrBot.git $INSTALL_DIR; then
+
+    
+    # 克隆到临时目录
+    if ! git clone ${target_proxy:+${target_proxy}/}https://github.com/AstrBotDevs/AstrBot.git "$CLONE_TEMP_DIR"; then
       echo "克隆 AstrBot 仓库失败"
+      rm -rf "$CLONE_TEMP_DIR"  # 清理失败的临时目录
       exit 1
     fi
-    mkdir AstrBot/data
-    cp cmd_config.json AstrBot/data
-    chmod +w AstrBot/data/cmd_config.json
+    
+    mkdir "$CLONE_TEMP_DIR/data"
+    cp cmd_config.json "$CLONE_TEMP_DIR/data"
+    chmod +w "$CLONE_TEMP_DIR/data/cmd_config.json"
     echo "拷贝 cmd_config.json 默认配置文件"
+
+    # 原子性重命名
+    mv "$CLONE_TEMP_DIR" "$INSTALL_DIR"
+    
   else
     progress_echo "AstrBot $L_INSTALLED"
   fi
