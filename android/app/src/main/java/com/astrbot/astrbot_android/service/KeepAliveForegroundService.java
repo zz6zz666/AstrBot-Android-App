@@ -7,6 +7,7 @@ import android.app.Service;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.media.AudioAttributes;
 import android.os.Build;
 import android.os.IBinder;
 
@@ -67,10 +68,23 @@ public class KeepAliveForegroundService extends Service {
             NotificationChannel channel = new NotificationChannel(
                     CHANNEL_ID,
                     CHANNEL_NAME,
-                    NotificationManager.IMPORTANCE_DEFAULT
+                    NotificationManager.IMPORTANCE_MIN
             );
             channel.setDescription(CHANNEL_DESCRIPTION);
             channel.setShowBadge(false);
+            channel.setSound(null, null);
+            channel.enableVibration(false);
+            
+            // Android 8.1 (API 27) 及以上版本设置通知分类
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
+                channel.setImportance(NotificationManager.IMPORTANCE_MIN);
+            }
+            
+            // Android 10 (API 29) 及以上版本可以设置额外的通知属性
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                // 设置为最低重要性，确保通知默认折叠
+                channel.setImportance(NotificationManager.IMPORTANCE_MIN);
+            }
             
             NotificationManager manager = getSystemService(NotificationManager.class);
             if (manager != null) {
@@ -91,7 +105,9 @@ public class KeepAliveForegroundService extends Service {
                 .setOngoing(true)
                 .setAutoCancel(false)
                 .setOnlyAlertOnce(true)
-                .setSilent(true);
+                .setSilent(true)
+                .setCategory(NotificationCompat.CATEGORY_SERVICE)
+                .setLocalOnly(true);
 
         Notification notification = builder.build();
         notification.flags |= Notification.FLAG_ONGOING_EVENT | Notification.FLAG_NO_CLEAR;
