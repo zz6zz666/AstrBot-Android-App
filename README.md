@@ -17,6 +17,12 @@ AstrBot-Android-App 是一款基于 **[AstrBot](https://docs.astrbot.app/) 聊�
 - **本地 Ubuntu 容器 🐧**：基于 Code LFA 提供的 Ubuntu 容器环境，保障 AstrBot 依赖的稳定性与兼容性。
 - **消息平台适配器 📡**：默认集成 napcatQQ 消息平台适配器并已完成 AstrBot 相关配置，直接登录即可使用 QQ 个人账号消息平台。
 
+<!-- 5张图并排，各占18%宽度，保留间距，比例不变 -->
+<img width="18%" alt="Screenshot_20251114-023227 AstrBot" src="https://github.com/user-attachments/assets/4fe35a68-96ff-4057-ac2a-15a9a0557865" style="margin-right: 2%;">
+<img width="18%" alt="Screenshot_20251114-023211 AstrBot" src="https://github.com/user-attachments/assets/24bc91e7-e9b9-41bc-afff-ab7d4a03a19f" style="margin-right: 2%;">
+<img width="18%" alt="Screenshot_20251114-023214 AstrBot" src="https://github.com/user-attachments/assets/d9e9915d-64d9-44f4-bf89-cbdac134bee4" style="margin-right: 2%;">
+<img width="18%" alt="Screenshot_20251114-020817 AstrBot" src="https://github.com/user-attachments/assets/5edbd9f8-b743-4898-8927-6744709c42bc" style="margin-right: 2%;">
+<img width="18%" alt="Screenshot_20251114-012715 AstrBot" src="https://github.com/user-attachments/assets/a966eae3-6378-4cc0-813b-45e961eb9325">
 
 ## 快速开始 🏁
 
