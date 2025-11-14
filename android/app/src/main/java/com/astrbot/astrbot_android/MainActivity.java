@@ -9,6 +9,8 @@ import androidx.annotation.NonNull;
 import androidx.fragment.app.FragmentActivity;
 import androidx.fragment.app.FragmentManager;
 
+// import com.astrbot.astrbot_android.service.KeepAliveForegroundService;
+
 import io.flutter.embedding.android.FlutterFragment;
 import io.flutter.embedding.engine.FlutterEngine;
 import io.flutter.embedding.engine.FlutterEngineCache;
@@ -27,6 +29,10 @@ public class MainActivity extends FragmentActivity {
         super.onCreate(savedInstanceState);
         mContext = this;
         setContentView(R.layout.my_activity_layout);
+        
+        // // 启动前台服务以保持应用在后台运行
+        // KeepAliveForegroundService.startService(this);
+        
         flutterFragment = (FlutterFragment) fragmentManager.findFragmentByTag(TAG_FLUTTER_FRAGMENT);
         FlutterEngine flutterEngine = new FlutterEngine(this, null, false);
         flutterEngine.getDartExecutor().executeDartEntrypoint(DartExecutor.DartEntrypoint.createDefault());
@@ -102,6 +108,13 @@ public class MainActivity extends FragmentActivity {
     public void onTrimMemory(int level) {
         super.onTrimMemory(level);
         flutterFragment.onTrimMemory(level);
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        // 停止前台服务
+        // KeepAliveForegroundService.stopService(this);
     }
 
 }
