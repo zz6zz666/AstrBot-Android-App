@@ -7,7 +7,8 @@ String prootDistroPath = '${RuntimeEnvir.usrPath}/var/lib/proot-distro';
 String ubuntuPath = '$prootDistroPath/installed-rootfs/ubuntu';
 String ubuntuName = Config.ubuntuFileName.replaceAll(RegExp('-pd.*'), '');
 
-String common = '''
+String common =
+    '''
 export TMPDIR=${RuntimeEnvir.tmpPath}
 export BIN=${RuntimeEnvir.binPath}
 export UBUNTU_PATH=$ubuntuPath
@@ -60,19 +61,6 @@ deb http://mirrors.tuna.tsinghua.edu.cn/ubuntu-ports/ noble-backports main restr
 # deb https://mirrors.tuna.tsinghua.edu.cn/ubuntu-ports/ noble-proposed main restricted universe multiverse
 # # deb-src https://mirrors.tuna.tsinghua.edu.cn/ubuntu-ports/ noble-proposed main restricted universe multiverse
 EOF
-}
-''';
-
-/// 安装ubuntu的shell
-String genCodeConfig = r'''
-gen_code_server_config(){
-  mkdir -p $UBUNTU_PATH/root/.config/code-server 2>/dev/null
-  echo "
-  bind-addr: 0.0.0.0:$CSPORT
-  auth: none
-  password: none
-  cert: false
-  " > $UBUNTU_PATH/root/.config/code-server/config.yaml
 }
 ''';
 
@@ -135,7 +123,8 @@ copy_files(){
 }
 ''';
 
-String commonScript = '''
+String commonScript =
+    '''
 $common
 $changeUbuntuNobleSource
 $installUbuntu
