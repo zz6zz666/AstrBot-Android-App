@@ -3,7 +3,7 @@
 ## 项目简介 📝
 ![455484170-ffd99b6b-3272-4682-beaa-6fe74250f7d9](https://github.com/user-attachments/assets/77a04df3-9721-4e92-b2c3-975c11006167)
 
-AstrBot-Android-App 是一款基于 **[AstrBot](https://docs.astrbot.app/) 聊天机器人框架** 、 **NapCatQQ消息适配器** 与 **Code LFA 的 Ubuntu 容器环境、模拟终端 & WebView框架** 打造的移动端解决方案，让你在 Android 设备上一键启动、配置并运行强大的多平台 LLM 聊天机器人。
+AstrBot-Android-App 是一款基于 **[AstrBot](https://docs.astrbot.app/) 聊天机器人框架** 、 **NapCatQQ消息适配器** 并借助了 **Code LFA 的 Ubuntu 容器环境、模拟终端 & WebView框架** 打造的移动端解决方案，让你在 Android 设备上一键启动、配置并运行强大的多平台 LLM 聊天机器人。
 
 我们移除了原始 Code LFA 中与 code-server 相关的所有模块，深度集成 AstrBot 框架，借助其 Ubuntu 容器环境实现 AstrBot 在移动端的本地化运行，并通过内置 WebView 直接连接 AstrBot 浏览器仪表盘，让移动端部署 AI 聊天机器人变得前所未有的简单。
 
