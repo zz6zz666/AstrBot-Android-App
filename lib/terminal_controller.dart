@@ -79,50 +79,36 @@ EOF
     if (pseudoTerminal == null) return;
 
     _webviewSubscription = pseudoTerminal!.output.cast<List<int>>().transform(const Utf8Decoder(allowMalformed: true)).listen((event) async {
-      try {
-        // 先判断订阅是否已取消，避免重复处理
-        if (_webviewSubscription == null) return;
+      // 先判断订阅是否已取消，避免重复处理
+      if (_webviewSubscription == null) return;
 
-        if (event.contains('Napcat ${S.current.installed}')) {
-          napcatTerminal?.writeString('$command\n');
-          bumpProgress();
-        }
-
-        // 检查是否包含适配器连接成功的标志
-        if (event.contains('适配器已连接')) {
-          Log.e('Adapter connected event detected: $event');
-          _isAdapterConnected = true;
-          bumpProgress();
-          
-          // 如果应用当前在前台，则立即打开webview
-          if (_isAppInForeground) {
-            Future.microtask(() {
-              openWebView();
-              webviewHasOpen = true; // 只有真正打开webview时才设置为true
-            });
-          }
-
-          Future.delayed(const Duration(milliseconds: 2000), () {
-            update();
-          });
-
-          // 取消订阅，后续不再监听
-          await _webviewSubscription?.cancel();
-          _webviewSubscription = null; // 置空标记已取消
-        }
-        terminal.write(event);
-      } catch (e, stackTrace) {
-        Log.e('Error in webview listener: $e\nStack trace: $stackTrace');
+      if (event.contains('Napcat ${S.current.installed}')) {
+        napcatTerminal?.writeString('$command\n');
+        bumpProgress();
       }
-    }, onError: (error) {
-      Log.e('Webview listener stream error: $error');
-      // 确保在错误情况下也能清理资源
-      _webviewSubscription?.cancel();
-      _webviewSubscription = null;
-    }, onDone: () {
-      Log.i('Webview listener stream completed');
-      // 确保在完成情况下也能清理资源
-      _webviewSubscription = null;
+
+      // 检查是否包含适配器连接成功的标志
+      if (event.contains('适配器已连接')) {
+        _isAdapterConnected = true;
+        bumpProgress();
+        
+        // 如果应用当前在前台，则立即打开webview
+        if (_isAppInForeground) {
+          Future.microtask(() {
+            openWebView();
+            webviewHasOpen = true; // 只有真正打开webview时才设置为true
+          });
+        }
+
+        Future.delayed(const Duration(milliseconds: 2000), () {
+          update();
+        });
+
+        // 取消订阅，后续不再监听
+        await _webviewSubscription?.cancel();
+        _webviewSubscription = null; // 置空标记已取消
+      }
+      terminal.write(event);
     });
   }
 
