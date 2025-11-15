@@ -1,4 +1,5 @@
-# AstrBot-Android-App: 🤖 移动端一键运行的 AstrBot 聊天机器人平台
+# AstrBot-Android-App: AstrBot 安卓 app 版本 
+# 🤖 移动端一键运行的 AstrBot 聊天机器人平台
 
 ## 项目简介 📝
 ![455484170-ffd99b6b-3272-4682-beaa-6fe74250f7d9](https://github.com/user-attachments/assets/77a04df3-9721-4e92-b2c3-975c11006167)
