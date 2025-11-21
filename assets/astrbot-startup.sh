@@ -4,6 +4,17 @@ export UV_LINK_MODE=copy
 export UV_DEFAULT_INDEX="https://pypi.tuna.tsinghua.edu.cn/simple"
 export UV_PYTHON_INSTALL_MIRROR="https://ghfast.top/https://github.com/astral-sh/python-build-standalone/releases/download"
 
+if [ -z "$TMPDIR" ]; then
+  echo "错误：未检测到 TMPDIR，请在挂载共享目录时传入 TMPDIR"
+  exit 1
+fi
+
+if [ ! -d "$TMPDIR" ]; then
+  echo "错误：临时目录 $TMPDIR 不存在，请确认挂载已经完成"
+  exit 1
+fi
+
+
 progress_echo(){
   echo -e "\033[31m- $@\033[0m"
   echo "$@" > "$TMPDIR/progress_des"
@@ -90,7 +101,12 @@ install_uv(){
 
     # 创建安装目录和临时目录
     mkdir -p $INSTALL_DIR
-    TMP_DIR=$(mktemp -d)
+    TMP_DIR=$(mktemp -d 2>/dev/null || mktemp -t 'uvtmp.XXXXXX')
+    if [ -z "$TMP_DIR" ]; then
+      echo "创建临时目录失败"
+      exit 1
+    fi
+    mkdir -p "$TMP_DIR"
     TMP_ARCHIVE="$TMP_DIR/$ARCHIVE_FILE"
 
     # 下载并解压（失败直接退出，不使用return）
@@ -101,7 +117,7 @@ install_uv(){
       exit 1
     fi
     echo "正在解压 $APP_NAME..."
-    if ! tar xf $TMP_ARCHIVE --strip-components 1 -C $TMP_DIR; then
+    if ! tar -C "$TMP_DIR" -xf "$TMP_ARCHIVE" --strip-components 1; then
       echo "解压失败"
       rm -rf $TMP_DIR
       exit 1

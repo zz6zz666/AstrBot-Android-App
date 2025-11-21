@@ -9,8 +9,11 @@ allprojects {
 }
 
 rootProject.buildDir = '../build'
+def localRootPath = rootProject.projectDir.absolutePath
 subprojects {
-    project.buildDir = "${rootProject.buildDir}/${project.name}"
+    if (project.projectDir.absolutePath.startsWith(localRootPath)) {
+        project.buildDir = "${rootProject.buildDir}/${project.name}"
+    }
 }
 subprojects {
     project.evaluationDependsOn(':app')

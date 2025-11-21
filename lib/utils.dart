@@ -93,13 +93,14 @@ Pty createPTY({
 }) {
   Map<String, String> envir = Map.from(Platform.environment);
   envir['HOME'] = RuntimeEnvir.homePath;
-  // proot-distro install need
+  // proot environment setup
   envir['TERMUX_PREFIX'] = RuntimeEnvir.usrPath;
   envir['TERM'] = 'xterm-256color';
   envir['PATH'] = RuntimeEnvir.path;
   // proot deps
   envir['PROOT_LOADER'] = '${RuntimeEnvir.binPath}/loader';
   envir['LD_LIBRARY_PATH'] = RuntimeEnvir.binPath;
+  envir['PROOT_TMP_DIR'] = RuntimeEnvir.tmpPath;
 
   return Pty.start(
     '${RuntimeEnvir.binPath}/${shell ?? 'bash'}',
