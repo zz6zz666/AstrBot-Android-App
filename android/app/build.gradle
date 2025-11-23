@@ -4,12 +4,14 @@ plugins {
     id 'kotlin-android'
     id 'dev.flutter.flutter-gradle-plugin'
 }
-// 本地编译注释以下代码
-// start
 def keystorePropertiesFile = rootProject.file('key.properties')
 def keystoreProperties = new Properties()
-keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
-// end
+def hasKeystoreFile = keystorePropertiesFile.exists()
+if (hasKeystoreFile) {
+    keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
+} else {
+    logger.lifecycle('Warning: key.properties not found, fallback to debug keystore.')
+}
 android {
     namespace 'com.astrbot.astrbot_android'
     compileSdk = flutter.compileSdkVersion
@@ -24,15 +26,14 @@ android {
         jvmTarget = 17
     }
     signingConfigs {
-        // 本地编译注释以下代码
-        // start
-        release {
-            keyAlias keystoreProperties['keyAlias']
-            keyPassword keystoreProperties['keyPassword']
-            storeFile file(keystoreProperties['storeFile'])
-            storePassword keystoreProperties['storePassword']
+        if (hasKeystoreFile) {
+            release {
+                keyAlias keystoreProperties['keyAlias']
+                keyPassword keystoreProperties['keyPassword']
+                storeFile file(keystoreProperties['storeFile'])
+                storePassword keystoreProperties['storePassword']
+            }
         }
-    // end
     }
 
     defaultConfig {
@@ -49,8 +50,7 @@ android {
 
     buildTypes {
         release {
-            // signingConfig signingConfigs.release
-            signingConfig signingConfigs.release
+            signingConfig hasKeystoreFile ? signingConfigs.release : signingConfigs.debug
             minifyEnabled true
             shrinkResources true
             // 禁用对特定原生库的strip操作，避免处理错误
@@ -59,7 +59,6 @@ android {
             }
         }
         debug {
-            // signingConfig signingConfigs.release
             signingConfig signingConfigs.debug
             minifyEnabled false
             shrinkResources false

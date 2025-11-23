@@ -63,15 +63,9 @@ class HomeController extends GetxController {
     update();
   }
 
-  String command = '''export PROOT_TMP_DIR=\$TMPDIR/napcatTerminal; \\
-bash ${RuntimeEnvir.binPath}/proot-distro login \\
---bind /storage/emulated/0:/sdcard/ \\
---bind \$TMPDIR/napcatTerminal:\$TMPDIR \\
-ubuntu --isolated <<EOF
-\$*
-bash launcher.sh
-EOF
-''';
+  // 使用 login_ubuntu 函数，传入要执行的命令
+  // Use login_ubuntu function, passing the command to execute
+  String get command => 'source ${RuntimeEnvir.homePath}/common.sh\nlogin_ubuntu "\$*\nbash launcher.sh"\n';
 
   // 监听输出，当输出中包含启动成功的标志时，启动 Code Server
   // Listen for output and start the Code Server when the success flag is detected
@@ -81,6 +75,19 @@ EOF
     _webviewSubscription = pseudoTerminal!.output.cast<List<int>>().transform(const Utf8Decoder(allowMalformed: true)).listen((event) async {
       // 先判断订阅是否已取消，避免重复处理
       if (_webviewSubscription == null) return;
+
+      // 输出到 Flutter 控制台
+      // Output to Flutter console
+      if (event.trim().isNotEmpty) {
+        // 按行分割输出，避免控制台输出混乱
+        final lines = event.split('\n');
+        for (var line in lines) {
+          if (line.trim().isNotEmpty) {
+            print('[AstrBot Script] $line');
+            Log.i(line, tag: 'AstrBot');
+          }
+        }
+      }
 
       if (event.contains('Napcat ${S.current.installed}')) {
         napcatTerminal?.writeString('$command\n');
@@ -118,6 +125,19 @@ EOF
     _qrcodeSubscription = napcatTerminal!.output.cast<List<int>>().transform(const Utf8Decoder(allowMalformed: true)).listen((event) async {
       // 先判断订阅是否已取消，避免重复处理
       if (_qrcodeSubscription == null) return;
+
+      // 输出到 Flutter 控制台
+      // Output to Flutter console
+      if (event.trim().isNotEmpty) {
+        // 按行分割输出，避免控制台输出混乱
+        final lines = event.split('\n');
+        for (var line in lines) {
+          if (line.trim().isNotEmpty) {
+            print('[AstrBot Napcat] $line');
+            Log.i(line, tag: 'AstrBot-Napcat');
+          }
+        }
+      }
 
       // 检测指令1显示二维码
       if (event.contains('二维码已保存到') && !_isQrcodeShowing.value) {
@@ -246,8 +266,8 @@ EOF
     });
   }
 
-  // 创建 busybox 的软连接，来确保 proot-distro 会用到的命令正常运行
-  // create busybox symlinks, to ensure proot-distro can use the commands normally
+  // 创建 busybox 的软连接，来确保 proot 会用到的命令正常运行
+  // create busybox symlinks, to ensure proot can use the commands normally
   void createBusyboxLink() {
     try {
       List<String> links = [
@@ -289,10 +309,6 @@ EOF
     napcatTerminal = createPTY();
 
     // 复制必要的文件
-    setProgress('复制 proot-distro...');
-    await AssetsUtils.copyAssetToPath('assets/proot-distro.zip', '${RuntimeEnvir.homePath}/proot-distro.zip');
-    bumpProgress();
-
     setProgress('复制 Ubuntu 系统镜像...');
     await AssetsUtils.copyAssetToPath('assets/${Config.ubuntuFileName}', '${RuntimeEnvir.homePath}/${Config.ubuntuFileName}');
     await AssetsUtils.copyAssetToPath('assets/astrbot-startup.sh', '${RuntimeEnvir.homePath}/astrbot-startup.sh');
