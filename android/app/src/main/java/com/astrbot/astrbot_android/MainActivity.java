@@ -9,8 +9,6 @@ import androidx.annotation.NonNull;
 import androidx.fragment.app.FragmentActivity;
 import androidx.fragment.app.FragmentManager;
 
-import com.astrbot.astrbot_android.service.KeepAliveForegroundService;
-
 import io.flutter.embedding.android.FlutterFragment;
 import io.flutter.embedding.engine.FlutterEngine;
 import io.flutter.embedding.engine.FlutterEngineCache;
@@ -30,29 +28,14 @@ public class MainActivity extends FragmentActivity {
         mContext = this;
         setContentView(com.astrbot.astrbot_android.R.layout.my_activity_layout);
         
-        // 启动前台服务以保持应用在后台运行
-        KeepAliveForegroundService.startService(this);
-        
         flutterFragment = (FlutterFragment) fragmentManager.findFragmentByTag(TAG_FLUTTER_FRAGMENT);
         FlutterEngine flutterEngine = new FlutterEngine(this, null, false);
         flutterEngine.getDartExecutor().executeDartEntrypoint(DartExecutor.DartEntrypoint.createDefault());
         new MethodChannel(flutterEngine.getDartExecutor().getBinaryMessenger(), "astrbot_channel").setMethodCallHandler((call, result) -> {
-            switch (call.method) {
-                case "open_webview": {
-                    runOnUiThread(() -> {
-                        fragmentManager.beginTransaction()
-                                .replace(com.astrbot.astrbot_android.R.id.fl_container, new WebViewFragment())
-                                .commit();
-                        result.success("success");
-                    });
-                }
-                break;
-                case "lib_path": {
-                    result.success(mContext.getApplicationContext().getApplicationInfo().nativeLibraryDir);
-                }
-                break;
-                default:
-                    result.notImplemented();
+            if ("lib_path".equals(call.method)) {
+                result.success(mContext.getApplicationContext().getApplicationInfo().nativeLibraryDir);
+            } else {
+                result.notImplemented();
             }
         });
         GeneratedPluginRegistrant.registerWith(flutterEngine);
@@ -113,8 +96,6 @@ public class MainActivity extends FragmentActivity {
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        // 停止前台服务
-        KeepAliveForegroundService.stopService(this);
     }
 
 }

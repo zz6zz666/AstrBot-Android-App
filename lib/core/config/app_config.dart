@@ -2,7 +2,7 @@ const bool product = bool.fromEnvironment('dart.vm.product');
 
 class Config {
   static const String packageName = 'com.astrbot.astrbot_android';
-  static const String versionName = '1.0.0';
+  static const String versionName = '1.2.0';
   
   // 修改端口号为新的值
   static const int port = 6185;

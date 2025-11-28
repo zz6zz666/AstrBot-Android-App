@@ -72,11 +72,6 @@ Future<Map<String, String>> getHardLinkMapByArchive(String tarGzPath) async {
   return result;
 }
 
-/// 打开 WebView
-/// Opens the WebView
-void openWebView() {
-  _channel.invokeMethod('open_webview');
-}
 // 为了获取Apk So库路径，我们需要一个MethodChannel
 MethodChannel _channel = const MethodChannel('astrbot_channel');
 

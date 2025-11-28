@@ -1,14 +1,16 @@
 import 'package:behavior_api/behavior_api.dart';
-import 'package:astrbot_android/config.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:get/get.dart';
 import 'package:global_repository/global_repository.dart';
 import 'package:settings/settings.dart';
-import 'package:astrbot_android/terminal_page.dart';
 import 'package:permission_handler/permission_handler.dart';
-import 'generated/l10n.dart';
+
+import 'generated/l10n.dart';  
+import 'core/config/app_config.dart';
+import 'core/services/foreground_service.dart';
+import 'ui/routes/app_routes.dart';
 
 // Notice: behavior will submit Device
 
@@ -21,14 +23,20 @@ Future<void> main() async {
     await Permission.notification.request();
   }
   
+  // 初始化并启动前台服务
+  ForegroundServiceManager.init();
+  await ForegroundServiceManager.startService();
+  
   // 隐藏系统 UI
   // Hide system UI
   SystemChrome.setEnabledSystemUIMode(SystemUiMode.manual, overlays: [
-    // SystemUiOverlay.top,
+    SystemUiOverlay.top,
     // SystemUiOverlay.bottom,
   ]);
   SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
     statusBarColor: Colors.transparent,
+    statusBarIconBrightness: Brightness.light, // Android 状态栏图标为白色
+    statusBarBrightness: Brightness.dark, // iOS 状态栏图标为白色
     systemNavigationBarColor: Colors.transparent,
     systemNavigationBarDividerColor: Colors.transparent,
   ));
@@ -38,8 +46,43 @@ Future<void> main() async {
 
 }
 
-class AstrBot extends StatelessWidget {
+class AstrBot extends StatefulWidget {
   const AstrBot({super.key});
+
+  @override
+  State<AstrBot> createState() => _AstrBotState();
+}
+
+class _AstrBotState extends State<AstrBot> with WidgetsBindingObserver {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+    
+    // 当应用完全退出时，确保清理所有资源
+    if (state == AppLifecycleState.detached) {
+      Log.i('应用正在退出，清理所有资源...', tag: 'AstrBot');
+      try {
+        // 尝试获取并清理 HomeController
+        if (Get.isRegistered<dynamic>()) {
+          Get.delete<dynamic>(force: true);
+        }
+      } catch (e) {
+        Log.e('清理资源时出错: $e', tag: 'AstrBot');
+      }
+    }
+  }
 
   // This widget is the root of your application.
   @override
@@ -58,7 +101,9 @@ class AstrBot extends StatelessWidget {
         GlobalCupertinoLocalizations.delegate,
       ],
       supportedLocales: S.delegate.supportedLocales,
-      home: TerminalPage(),
+      // 使用路由管理
+      initialRoute: AppRoutes.terminal,
+      getPages: AppRoutes.routes,
     );
   }
 }

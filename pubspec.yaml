@@ -19,8 +19,11 @@ dependencies:
   cupertino_icons: ^1.0.2
   get: ^4.6.5
   device_info_plus: ^11.1.1
+  package_info_plus: ^8.0.0
   tar: ^2.0.0
   path: ^1.9.1
+  webview_flutter: ^4.10.0
+  permission_handler: ^11.3.1
 
   # get repo
   xterm:
@@ -37,6 +40,7 @@ dependencies:
     git:
       url: https://github.com/nightmare-space/empty_package
       path: behavior_api
+  flutter_foreground_task: ^9.1.0
 
 dev_dependencies:
   flutter_test:

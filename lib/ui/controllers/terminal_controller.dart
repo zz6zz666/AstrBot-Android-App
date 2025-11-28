@@ -7,18 +7,22 @@ import 'package:get/get.dart';
 import 'package:global_repository/global_repository.dart';
 import 'package:settings/settings.dart';
 import 'package:xterm/xterm.dart';
-import 'config.dart';
-import 'generated/l10n.dart';
-import 'script.dart';
-import 'utils.dart';
-import 'package:flutter/material.dart'; // 引入Dialog等UI组件
+import 'package:flutter/material.dart';
+
+import '../../core/config/app_config.dart';
+import '../../generated/l10n.dart';
+import '../../core/constants/scripts.dart';
+import '../../core/utils/file_utils.dart';
+import '../routes/app_routes.dart';
 
 class HomeController extends GetxController {
   // bool vsCodeStaring = false;
   SettingNode privacySetting = 'privacy'.setting;
+  SettingNode napCatWebUiEnabled = 'napcat_webui_enabled'.setting;
   Pty? pseudoTerminal;
   Pty? napcatTerminal;
 
+  final RxString napCatWebUiToken = ''.obs; // 存储 NapCat WebUI Token
   final RxBool _isQrcodeShowing = false.obs;
   Dialog? _qrcodeDialog;
   StreamSubscription? _qrcodeSubscription;
@@ -65,7 +69,9 @@ class HomeController extends GetxController {
 
   // 使用 login_ubuntu 函数，传入要执行的命令
   // Use login_ubuntu function, passing the command to execute
-  String get command => 'source ${RuntimeEnvir.homePath}/common.sh\nlogin_ubuntu "\$*\nbash launcher.sh"\n';
+  String get command {
+    return 'source ${RuntimeEnvir.homePath}/common.sh\nlogin_ubuntu "bash /root/launcher.sh"\n';
+  }
 
   // 监听输出，当输出中包含启动成功的标志时，启动 Code Server
   // Listen for output and start the Code Server when the success flag is detected
@@ -83,7 +89,6 @@ class HomeController extends GetxController {
         final lines = event.split('\n');
         for (var line in lines) {
           if (line.trim().isNotEmpty) {
-            print('[AstrBot Script] $line');
             Log.i(line, tag: 'AstrBot');
           }
         }
@@ -102,7 +107,8 @@ class HomeController extends GetxController {
         // 如果应用当前在前台，则立即打开webview
         if (_isAppInForeground) {
           Future.microtask(() {
-            openWebView();
+            // 使用路由跳转
+            Get.toNamed(AppRoutes.webview);
             webviewHasOpen = true; // 只有真正打开webview时才设置为true
           });
         }
@@ -133,8 +139,19 @@ class HomeController extends GetxController {
         final lines = event.split('\n');
         for (var line in lines) {
           if (line.trim().isNotEmpty) {
-            print('[AstrBot Napcat] $line');
             Log.i(line, tag: 'AstrBot-Napcat');
+          }
+        }
+      }
+
+      // 捕获 NapCat WebUI Token
+      if (event.contains('WebUi Token:')) {
+        final match = RegExp(r'WebUi Token:\s+(\w+)').firstMatch(event);
+        if (match != null) {
+          final token = match.group(1);
+          if (token != null) {
+            napCatWebUiToken.value = token;
+            Log.i('捕获到 NapCat Token: $token', tag: 'AstrBot');
           }
         }
       }
@@ -198,6 +215,37 @@ class HomeController extends GetxController {
         // 取消订阅，后续不再监听任何指令
         await _qrcodeSubscription?.cancel();
         _qrcodeSubscription = null; // 置空标记已取消
+      }
+
+      // 检测指令3处理登录错误
+      if (event.contains('Login Error') && _isQrcodeShowing.value) {
+        // 关闭二维码对话框
+        if (_qrcodeDialog != null) {
+          Get.back();
+          _isQrcodeShowing.value = false;
+          _qrcodeDialog = null;
+        }
+
+        // 提取错误信息
+        String errorMsg = '登录失败';
+        if (event.contains('"message":"')) {
+          final match = RegExp(r'"message":"([^"]+)"').firstMatch(event);
+          if (match != null) {
+            errorMsg = match.group(1) ?? errorMsg;
+          }
+        }
+
+        // 显示错误提示
+        Get.snackbar(
+          'NapCat 登录失败',
+          errorMsg,
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: Colors.red.withOpacity(0.8),
+          colorText: Colors.white,
+          duration: const Duration(seconds: 5),
+        );
+
+        // 不取消订阅，允许用户重新扫码
       }
     });
   }
@@ -359,7 +407,7 @@ class HomeController extends GetxController {
           // 当应用回到前台且适配器已连接但webview未打开时，打开webview
           if (_isAdapterConnected && !webviewHasOpen) {
             Future.microtask(() {
-              openWebView();
+              Get.toNamed(AppRoutes.webview);
               webviewHasOpen = true;
             });
           }
@@ -378,6 +426,23 @@ class HomeController extends GetxController {
     _webviewSubscription?.cancel();
     _qrcodeSubscription = null;
     _webviewSubscription = null;
+    
+    // 杀死所有终端进程，释放端口
+    try {
+      if (pseudoTerminal != null) {
+        Log.i('正在关闭主终端进程...', tag: 'AstrBot');
+        pseudoTerminal?.kill();
+        pseudoTerminal = null;
+      }
+      if (napcatTerminal != null) {
+        Log.i('正在关闭 NapCat 终端进程...', tag: 'AstrBot-Napcat');
+        napcatTerminal?.kill();
+        napcatTerminal = null;
+      }
+    } catch (e) {
+      Log.e('关闭终端进程时出错: $e', tag: 'AstrBot');
+    }
+    
     // 移除生命周期观察者
     WidgetsBinding.instance.removeObserver(
       LifecycleObserver(
