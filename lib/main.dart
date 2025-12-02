@@ -1,14 +1,11 @@
-import 'package:behavior_api/behavior_api.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:get/get.dart';
 import 'package:global_repository/global_repository.dart';
 import 'package:settings/settings.dart';
-import 'package:permission_handler/permission_handler.dart';
 
-import 'generated/l10n.dart';  
-import 'core/config/app_config.dart';
+import 'generated/l10n.dart';
 import 'core/services/foreground_service.dart';
 import 'ui/routes/app_routes.dart';
 

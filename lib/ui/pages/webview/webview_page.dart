@@ -4,8 +4,8 @@ import 'package:get/get.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 import 'package:webview_flutter_android/webview_flutter_android.dart';
 import '../../controllers/terminal_controller.dart';
-import 'settings_page.dart';
-import 'bottom_nav_bar.dart';
+import '../settings/settings_page.dart';
+import '../../navbar/bottom_nav_bar.dart';
 
 class WebViewPage extends StatefulWidget {
   const WebViewPage({super.key});
@@ -18,6 +18,7 @@ class _WebViewPageState extends State<WebViewPage> {
   int _currentIndex = 0;
   late final WebViewController _astrBotController;
   late final WebViewController _napCatController;
+  final Map<int, WebViewController> _customControllers = {}; // 存储自定义 WebView 控制器
   DateTime? _lastBackPressed;
 
   final HomeController homeController = Get.find<HomeController>();
@@ -110,10 +111,6 @@ class _WebViewPageState extends State<WebViewPage> {
         ),
       );
 
-    // 检查 WebUI 是否启用
-    final bool webUiEnabled = homeController.napCatWebUiEnabled.get() ?? false;
-    
-
     // 监听 Token 变化
     ever(homeController.napCatWebUiToken, (String token) {
       if (token.isNotEmpty) {
@@ -143,6 +140,40 @@ class _WebViewPageState extends State<WebViewPage> {
     }
   }
 
+  // 创建自定义 WebView 控制器
+  WebViewController _createCustomController(String url) {
+    final controller = WebViewController()
+      ..setJavaScriptMode(JavaScriptMode.unrestricted)
+      ..setBackgroundColor(Colors.white)
+      ..setNavigationDelegate(
+        NavigationDelegate(
+          onWebResourceError: (WebResourceError error) {
+            debugPrint('Custom WebView error: ${error.description}');
+          },
+        ),
+      )
+      ..loadRequest(Uri.parse(url));
+
+    if (controller.platform is AndroidWebViewController) {
+      AndroidWebViewController.enableDebugging(true);
+      final androidController = controller.platform as AndroidWebViewController;
+      androidController.setMediaPlaybackRequiresUserGesture(false);
+      androidController.setMixedContentMode(MixedContentMode.compatibilityMode);
+      androidController.setAllowFileAccess(true);
+      androidController.setAllowContentAccess(true);
+    }
+
+    return controller;
+  }
+
+  // 获取或创建自定义 WebView 控制器
+  WebViewController _getCustomController(int index, String url) {
+    if (!_customControllers.containsKey(index)) {
+      _customControllers[index] = _createCustomController(url);
+    }
+    return _customControllers[index]!;
+  }
+
   void _injectClipboardScript(WebViewController controller) {
     const String jsCode = '''
       const originalReadText = navigator.clipboard.readText;
@@ -169,20 +200,35 @@ class _WebViewPageState extends State<WebViewPage> {
 
   Future<void> _handleBackPress() async {
     // 检查 NapCat WebUI 是否启用
-    final bool napCatEnabled = homeController.napCatWebUiEnabled.get() ?? false;
-    
+    final bool napCatEnabled = homeController.napCatWebUiEnabledRx.value;
+    final customWebViews = homeController.customWebViews;
+
     // 如果当前是 AstrBot 页面且 WebView 可回退，则回退
     if (_currentIndex == 0 && await _astrBotController.canGoBack()) {
       await _astrBotController.goBack();
       return;
     }
-    
+
     // 如果当前是 NapCat 页面且 WebView 可回退，则回退
     if (napCatEnabled && _currentIndex == 1 && await _napCatController.canGoBack()) {
       await _napCatController.goBack();
       return;
     }
-    
+
+    // 检查是否是自定义 WebView 页面
+    int customStartIndex = napCatEnabled ? 2 : 1;
+    int customEndIndex = customStartIndex + customWebViews.length - 1;
+    if (_currentIndex >= customStartIndex && _currentIndex <= customEndIndex) {
+      int customIndex = _currentIndex - customStartIndex;
+      if (_customControllers.containsKey(customIndex)) {
+        final controller = _customControllers[customIndex]!;
+        if (await controller.canGoBack()) {
+          await controller.goBack();
+          return;
+        }
+      }
+    }
+
     // 否则执行双击退出逻辑
     final now = DateTime.now();
     final backButtonInterval = _lastBackPressed == null
@@ -216,62 +262,74 @@ class _WebViewPageState extends State<WebViewPage> {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
-    // 检查 NapCat WebUI 是否启用
-    final bool napCatEnabled = homeController.napCatWebUiEnabled.get() ?? false;
+    return Obx(() {
+      // 检查 NapCat WebUI 是否启用
+      final bool napCatEnabled = homeController.napCatWebUiEnabledRx.value;
+      final customWebViews = homeController.customWebViews;
 
-    // 动态构建页面列表
-    final List<Widget> pages = [
-      // 1. AstrBot 配置页面
-      WebViewWidget(controller: _astrBotController),
+      // 动态构建页面列表
+      final List<Widget> pages = [
+        // 1. AstrBot 配置页面
+        WebViewWidget(controller: _astrBotController),
 
-      // 2. NapCat 配置页面（仅在启用时添加）
-      if (napCatEnabled) WebViewWidget(controller: _napCatController),
-    ];
+        // 2. NapCat 配置页面（仅在启用时添加）
+        if (napCatEnabled) WebViewWidget(controller: _napCatController),
 
-    return PopScope(
-      canPop: false,
-      onPopInvokedWithResult: (didPop, result) async {
-        if (didPop) return;
-        await _handleBackPress();
-      },
-      child: AnnotatedRegion<SystemUiOverlayStyle>(
-        value: const SystemUiOverlayStyle(
-          statusBarColor: Colors.white,
-          statusBarIconBrightness: Brightness.dark,
-          statusBarBrightness: Brightness.light,
-        ),
-        child: Scaffold(
-          backgroundColor: Colors.white,
-          body: SafeArea(
-            top: true,
-            child: IndexedStack(
-              index: _currentIndex,
-              children: [
-                ...pages,
+        // 3. 自定义 WebView 页面
+        ...List.generate(customWebViews.length, (index) {
+          final webview = customWebViews[index];
+          final url = webview['url'] ?? '';
+          return WebViewWidget(
+            controller: _getCustomController(index, url),
+          );
+        }),
+      ];
 
-                // 3. 软件设置页面
-                SettingsPage(
-                  astrBotController: _astrBotController,
-                  napCatController: _napCatController,
-                  onNavigate: (index) {
-                    setState(() {
-                      _currentIndex = index;
-                    });
-                  },
-                ),
-              ],
+      return PopScope(
+        canPop: false,
+        onPopInvokedWithResult: (didPop, result) async {
+          if (didPop) return;
+          await _handleBackPress();
+        },
+        child: AnnotatedRegion<SystemUiOverlayStyle>(
+          value: const SystemUiOverlayStyle(
+            statusBarColor: Colors.white,
+            statusBarIconBrightness: Brightness.dark,
+            statusBarBrightness: Brightness.light,
+          ),
+          child: Scaffold(
+            backgroundColor: Colors.white,
+            body: SafeArea(
+              top: true,
+              child: IndexedStack(
+                index: _currentIndex,
+                children: [
+                  ...pages,
+
+                  // 4. 软件设置页面
+                  SettingsPage(
+                    astrBotController: _astrBotController,
+                    napCatController: _napCatController,
+                    onNavigate: (index) {
+                      setState(() {
+                        _currentIndex = index;
+                      });
+                    },
+                  ),
+                ],
+              ),
+            ),
+            bottomNavigationBar: WebViewBottomNavBar(
+              currentIndex: _currentIndex,
+              onTap: (index) {
+                setState(() {
+                  _currentIndex = index;
+                });
+              },
             ),
           ),
-          bottomNavigationBar: WebViewBottomNavBar(
-            currentIndex: _currentIndex,
-            onTap: (index) {
-              setState(() {
-                _currentIndex = index;
-              });
-            },
-          ),
         ),
-      ),
-    );
+      );
+    });
   }
 }

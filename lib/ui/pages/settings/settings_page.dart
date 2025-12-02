@@ -4,7 +4,6 @@ import 'package:get/get.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 import 'package:global_repository/global_repository.dart';
 import 'package:package_info_plus/package_info_plus.dart';
-import 'package:permission_handler/permission_handler.dart';
 import '../../controllers/terminal_controller.dart';
 import '../../../core/constants/scripts.dart' as scripts;
 
@@ -39,6 +38,172 @@ class _SettingsPageState extends State<SettingsPage> {
     setState(() {
       _appVersion = '${packageInfo.version}+${packageInfo.buildNumber}';
     });
+  }
+
+  // 显示添加自定义 WebView 对话框
+  void _showAddWebViewDialog() {
+    final titleController = TextEditingController();
+    final urlController = TextEditingController();
+
+    Get.dialog(
+      AlertDialog(
+        title: const Text('添加自定义 WebView'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: titleController,
+              decoration: const InputDecoration(
+                labelText: '标题',
+                hintText: '例如：我的仪表盘',
+                border: OutlineInputBorder(),
+              ),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: urlController,
+              decoration: const InputDecoration(
+                labelText: 'URL',
+                hintText: '例如：http://127.0.0.1:8080',
+                border: OutlineInputBorder(),
+              ),
+              keyboardType: TextInputType.url,
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Get.back(),
+            child: const Text('取消'),
+          ),
+          TextButton(
+            onPressed: () {
+              final title = titleController.text.trim();
+              final url = urlController.text.trim();
+
+              if (title.isEmpty || url.isEmpty) {
+                Get.snackbar(
+                  '输入错误',
+                  '标题和 URL 不能为空',
+                  snackPosition: SnackPosition.BOTTOM,
+                  backgroundColor: Colors.orange,
+                  colorText: Colors.white,
+                );
+                return;
+              }
+
+              homeController.addCustomWebView(title, url);
+              Get.back();
+
+              Get.snackbar(
+                '添加成功',
+                '自定义 WebView "$title" 已添加',
+                snackPosition: SnackPosition.BOTTOM,
+                duration: const Duration(seconds: 2),
+              );
+            },
+            child: const Text('添加'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // 显示编辑自定义 WebView 对话框
+  void _showEditWebViewDialog(int index, Map<String, String> webview) {
+    final titleController = TextEditingController(text: webview['title']);
+    final urlController = TextEditingController(text: webview['url']);
+
+    Get.dialog(
+      AlertDialog(
+        title: const Text('编辑自定义 WebView'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: titleController,
+              decoration: const InputDecoration(
+                labelText: '标题',
+                border: OutlineInputBorder(),
+              ),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: urlController,
+              decoration: const InputDecoration(
+                labelText: 'URL',
+                border: OutlineInputBorder(),
+              ),
+              keyboardType: TextInputType.url,
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Get.back(),
+            child: const Text('取消'),
+          ),
+          TextButton(
+            onPressed: () {
+              final title = titleController.text.trim();
+              final url = urlController.text.trim();
+
+              if (title.isEmpty || url.isEmpty) {
+                Get.snackbar(
+                  '输入错误',
+                  '标题和 URL 不能为空',
+                  snackPosition: SnackPosition.BOTTOM,
+                  backgroundColor: Colors.orange,
+                  colorText: Colors.white,
+                );
+                return;
+              }
+
+              homeController.updateCustomWebView(index, title, url);
+              Get.back();
+
+              Get.snackbar(
+                '更新成功',
+                '自定义 WebView 已更新',
+                snackPosition: SnackPosition.BOTTOM,
+                duration: const Duration(seconds: 2),
+              );
+            },
+            child: const Text('保存'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // 确认删除自定义 WebView
+  void _confirmDeleteWebView(int index, String title) {
+    Get.dialog(
+      AlertDialog(
+        title: const Text('确认删除'),
+        content: Text('确定要删除自定义 WebView "$title" 吗？'),
+        actions: [
+          TextButton(
+            onPressed: () => Get.back(),
+            child: const Text('取消'),
+          ),
+          TextButton(
+            onPressed: () {
+              homeController.removeCustomWebView(index);
+              Get.back();
+
+              Get.snackbar(
+                '删除成功',
+                '自定义 WebView "$title" 已删除',
+                snackPosition: SnackPosition.BOTTOM,
+                duration: const Duration(seconds: 2),
+              );
+            },
+            child: const Text('删除', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
   }
 
   // 执行备份操作
@@ -381,10 +546,8 @@ class _SettingsPageState extends State<SettingsPage> {
           trailing: Switch(
             value: homeController.napCatWebUiEnabled.get() ?? false,
             onChanged: (bool value) {
-              homeController.napCatWebUiEnabled.set(value);
-
-              // 通知父组件更新
-              setState(() {});
+              // 使用新的方法来同步更新响应式变量
+              homeController.setNapCatWebUiEnabled(value);
 
               Get.snackbar(
                 value ? 'WebUI 已启用' : 'WebUI 已禁用',
@@ -397,6 +560,64 @@ class _SettingsPageState extends State<SettingsPage> {
             },
           ),
         ),
+        const Divider(height: 1),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+          child: Row(
+            children: [
+              const Text(
+                '自定义 WebView',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.grey),
+              ),
+              const Spacer(),
+              IconButton(
+                icon: const Icon(Icons.add_circle_outline, color: Colors.blue),
+                onPressed: _showAddWebViewDialog,
+                tooltip: '添加自定义 WebView',
+              ),
+            ],
+          ),
+        ),
+        Obx(() {
+          final customWebViews = homeController.customWebViews;
+          if (customWebViews.isEmpty) {
+            return const Padding(
+              padding: EdgeInsets.all(16.0),
+              child: Center(
+                child: Text(
+                  '暂无自定义 WebView\n点击右上角"+"添加',
+                  style: TextStyle(color: Colors.grey),
+                  textAlign: TextAlign.center,
+                ),
+              ),
+            );
+          }
+          return Column(
+            children: List.generate(customWebViews.length, (index) {
+              final webview = customWebViews[index];
+              return ListTile(
+                leading: const Icon(Icons.language),
+                title: Text(webview['title'] ?? 'WebUI'),
+                subtitle: Text(webview['url'] ?? ''),
+                trailing: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    IconButton(
+                      icon: const Icon(Icons.edit, size: 20),
+                      onPressed: () => _showEditWebViewDialog(index, webview),
+                      tooltip: '编辑',
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.delete, size: 20, color: Colors.red),
+                      onPressed: () => _confirmDeleteWebView(index, webview['title'] ?? 'WebUI'),
+                      tooltip: '删除',
+                    ),
+                  ],
+                ),
+              );
+            }),
+          );
+        }),
         ListTile(
           leading: const Icon(Icons.backup),
           title: const Text('备份 AstrBot 数据'),

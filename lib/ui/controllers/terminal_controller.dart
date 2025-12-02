@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
-import 'dart:ui';
 import 'package:flutter_pty/flutter_pty.dart';
 import 'package:get/get.dart';
 import 'package:global_repository/global_repository.dart';
@@ -24,6 +23,8 @@ class HomeController extends GetxController {
 
   final RxString napCatWebUiToken = ''.obs; // 存储 NapCat WebUI Token
   final RxBool _isQrcodeShowing = false.obs;
+  final RxBool napCatWebUiEnabledRx = false.obs; // GetX 响应式变量用于导航栏更新
+  final RxList<Map<String, String>> customWebViews = <Map<String, String>>[].obs; // 自定义 WebView 列表
   Dialog? _qrcodeDialog;
   StreamSubscription? _qrcodeSubscription;
   StreamSubscription? _webviewSubscription; // 添加webview监听订阅
@@ -240,7 +241,7 @@ class HomeController extends GetxController {
           'NapCat 登录失败',
           errorMsg,
           snackPosition: SnackPosition.BOTTOM,
-          backgroundColor: Colors.red.withOpacity(0.8),
+          backgroundColor: Colors.red.withValues(alpha: 0.8),
           colorText: Colors.white,
           duration: const Duration(seconds: 5),
         );
@@ -364,7 +365,7 @@ class HomeController extends GetxController {
     bumpProgress();
 
     // 写入并执行脚本
-    File('${RuntimeEnvir.homePath}/common.sh').writeAsStringSync('$commonScript');
+    File('${RuntimeEnvir.homePath}/common.sh').writeAsStringSync(commonScript);
 
     initWebviewListener();
     bumpProgress();
@@ -383,6 +384,13 @@ class HomeController extends GetxController {
   @override
   void onInit() {
     super.onInit();
+
+    // 初始化 NapCat WebUI 启用状态
+    napCatWebUiEnabledRx.value = napCatWebUiEnabled.get() ?? false;
+
+    // 从持久化存储加载自定义 WebView 列表
+    _loadCustomWebViews();
+
     // 为 Google Play 上架做准备
     // For Google Play
     Future.delayed(Duration.zero, () async {
@@ -398,7 +406,7 @@ class HomeController extends GetxController {
       // 加载并启动 AstrBot
       loadAstrBot();
     });
-    
+
     // 监听应用生命周期状态变化
     WidgetsBinding.instance.addObserver(
       LifecycleObserver(
@@ -417,6 +425,55 @@ class HomeController extends GetxController {
         },
       ),
     );
+  }
+
+  // 加载自定义 WebView 列表
+  void _loadCustomWebViews() {
+    final stored = box!.get('custom_webviews', defaultValue: <dynamic>[]);
+    if (stored is List) {
+      customWebViews.value = stored.map((e) {
+        if (e is Map) {
+          return {
+            'title': e['title']?.toString() ?? '',
+            'url': e['url']?.toString() ?? '',
+          };
+        }
+        return <String, String>{};
+      }).toList();
+    }
+  }
+
+  // 保存自定义 WebView 列表
+  void _saveCustomWebViews() {
+    box!.put('custom_webviews', customWebViews.toList());
+  }
+
+  // 添加自定义 WebView
+  void addCustomWebView(String title, String url) {
+    customWebViews.add({'title': title, 'url': url});
+    _saveCustomWebViews();
+  }
+
+  // 删除自定义 WebView
+  void removeCustomWebView(int index) {
+    if (index >= 0 && index < customWebViews.length) {
+      customWebViews.removeAt(index);
+      _saveCustomWebViews();
+    }
+  }
+
+  // 更新自定义 WebView
+  void updateCustomWebView(int index, String title, String url) {
+    if (index >= 0 && index < customWebViews.length) {
+      customWebViews[index] = {'title': title, 'url': url};
+      _saveCustomWebViews();
+    }
+  }
+
+  // 更新 NapCat WebUI 启用状态（用于同步响应式变量）
+  void setNapCatWebUiEnabled(bool value) {
+    napCatWebUiEnabled.set(value);
+    napCatWebUiEnabledRx.value = value;
   }
 
   @override
