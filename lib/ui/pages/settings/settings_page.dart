@@ -64,7 +64,8 @@ class _SettingsPageState extends State<SettingsPage> {
               controller: urlController,
               decoration: const InputDecoration(
                 labelText: 'URL',
-                hintText: '例如：http://127.0.0.1:8080',
+                hintText: '例如：6099/webui?token=***',
+                helperText: '自动添加前缀 https://127.0.0.1: 若需使用http,请手动添加',
                 border: OutlineInputBorder(),
               ),
               keyboardType: TextInputType.url,
@@ -79,7 +80,7 @@ class _SettingsPageState extends State<SettingsPage> {
           TextButton(
             onPressed: () {
               final title = titleController.text.trim();
-              final url = urlController.text.trim();
+              var url = urlController.text.trim();
 
               if (title.isEmpty || url.isEmpty) {
                 Get.snackbar(
@@ -90,6 +91,11 @@ class _SettingsPageState extends State<SettingsPage> {
                   colorText: Colors.white,
                 );
                 return;
+              }
+
+              // 如果URL不包含协议前缀,自动添加 https://127.0.0.1:
+              if (!url.startsWith('http://') && !url.startsWith('https://')) {
+                url = 'https://127.0.0.1:$url';
               }
 
               homeController.addCustomWebView(title, url);
@@ -112,7 +118,16 @@ class _SettingsPageState extends State<SettingsPage> {
   // 显示编辑自定义 WebView 对话框
   void _showEditWebViewDialog(int index, Map<String, String> webview) {
     final titleController = TextEditingController(text: webview['title']);
-    final urlController = TextEditingController(text: webview['url']);
+
+    // 将完整URL转换为简化格式用于编辑
+    String displayUrl = webview['url'] ?? '';
+    if (displayUrl.startsWith('https://127.0.0.1:')) {
+      displayUrl = displayUrl.substring('https://127.0.0.1:'.length);
+    } else if (displayUrl.startsWith('http://127.0.0.1:')) {
+      displayUrl = displayUrl.substring('http://127.0.0.1:'.length);
+    }
+
+    final urlController = TextEditingController(text: displayUrl);
 
     Get.dialog(
       AlertDialog(
@@ -132,6 +147,7 @@ class _SettingsPageState extends State<SettingsPage> {
               controller: urlController,
               decoration: const InputDecoration(
                 labelText: 'URL',
+                helperText: '自动添加前缀 https://127.0.0.1: 若需使用http,请手动添加',
                 border: OutlineInputBorder(),
               ),
               keyboardType: TextInputType.url,
@@ -146,7 +162,7 @@ class _SettingsPageState extends State<SettingsPage> {
           TextButton(
             onPressed: () {
               final title = titleController.text.trim();
-              final url = urlController.text.trim();
+              var url = urlController.text.trim();
 
               if (title.isEmpty || url.isEmpty) {
                 Get.snackbar(
@@ -157,6 +173,11 @@ class _SettingsPageState extends State<SettingsPage> {
                   colorText: Colors.white,
                 );
                 return;
+              }
+
+              // 如果URL不包含协议前缀,自动添加 https://127.0.0.1:
+              if (!url.startsWith('http://') && !url.startsWith('https://')) {
+                url = 'https://127.0.0.1:$url';
               }
 
               homeController.updateCustomWebView(index, title, url);
@@ -235,7 +256,8 @@ class _SettingsPageState extends State<SettingsPage> {
 
       // 获取当前时间戳
       final now = DateTime.now();
-      final timestamp = '${now.year}${now.month.toString().padLeft(2, '0')}${now.day.toString().padLeft(2, '0')}_${now.hour.toString().padLeft(2, '0')}${now.minute.toString().padLeft(2, '0')}${now.second.toString().padLeft(2, '0')}';
+      final timestamp =
+          '${now.year}${now.month.toString().padLeft(2, '0')}${now.day.toString().padLeft(2, '0')}_${now.hour.toString().padLeft(2, '0')}${now.minute.toString().padLeft(2, '0')}${now.second.toString().padLeft(2, '0')}';
 
       // 备份文件路径（保存到下载文件夹）
       final backupDir = Directory('/storage/emulated/0/Download/AstrBot');
@@ -264,7 +286,14 @@ class _SettingsPageState extends State<SettingsPage> {
       // 执行备份命令
       final result = await Process.run(
         '${RuntimeEnvir.binPath}/busybox',
-        ['tar', '-czf', backupPath, '-C', '${scripts.ubuntuPath}/root/AstrBot', 'data'],
+        [
+          'tar',
+          '-czf',
+          backupPath,
+          '-C',
+          '${scripts.ubuntuPath}/root/AstrBot',
+          'data'
+        ],
       );
 
       if (result.exitCode == 0) {
@@ -318,7 +347,8 @@ class _SettingsPageState extends State<SettingsPage> {
         ListTile(
           leading: const Icon(Icons.info_outline),
           title: const Text('软件版本'),
-          subtitle: Text(_appVersion.isEmpty ? '加载中...' : 'AstrBot Android v$_appVersion'),
+          subtitle: Text(
+              _appVersion.isEmpty ? '加载中...' : 'AstrBot Android v$_appVersion'),
           onTap: () {},
         ),
         ListTile(
@@ -338,11 +368,13 @@ class _SettingsPageState extends State<SettingsPage> {
                   ),
                   TextButton(
                     onPressed: () => Get.back(result: 'no_backup'),
-                    child: const Text('直接重装', style: TextStyle(color: Colors.orange)),
+                    child: const Text('直接重装',
+                        style: TextStyle(color: Colors.orange)),
                   ),
                   TextButton(
                     onPressed: () => Get.back(result: 'backup'),
-                    child: const Text('备份后重装', style: TextStyle(color: Colors.blue)),
+                    child: const Text('备份后重装',
+                        style: TextStyle(color: Colors.blue)),
                   ),
                 ],
               ),
@@ -379,7 +411,8 @@ class _SettingsPageState extends State<SettingsPage> {
                       ),
                       TextButton(
                         onPressed: () => Get.back(result: true),
-                        child: const Text('继续重装', style: TextStyle(color: Colors.red)),
+                        child: const Text('继续重装',
+                            style: TextStyle(color: Colors.red)),
                       ),
                     ],
                   ),
@@ -403,7 +436,8 @@ class _SettingsPageState extends State<SettingsPage> {
                   ),
                   TextButton(
                     onPressed: () => Get.back(result: true),
-                    child: const Text('确定重装', style: TextStyle(color: Colors.red)),
+                    child:
+                        const Text('确定重装', style: TextStyle(color: Colors.red)),
                   ),
                 ],
               ),
@@ -464,7 +498,8 @@ class _SettingsPageState extends State<SettingsPage> {
                   ),
                   TextButton(
                     onPressed: () => Get.back(result: true),
-                    child: const Text('确定', style: TextStyle(color: Colors.orange)),
+                    child: const Text('确定',
+                        style: TextStyle(color: Colors.orange)),
                   ),
                 ],
               ),
@@ -509,31 +544,20 @@ class _SettingsPageState extends State<SettingsPage> {
           },
         ),
         ListTile(
-          leading: const Icon(Icons.dashboard),
-          title: const Text('前往 NapCat 仪表盘'),
-          subtitle: const Text('在 NapCat 仪表盘中管理 QQ 登录状态'),
+          leading: const Icon(Icons.home),
+          title: const Text('回到 AstrBot 主页'),
+          subtitle: const Text('重置并刷新 AstrBot 页面'),
           onTap: () {
-            // 检查 NapCat WebUI 是否启用
-            final bool napCatEnabled = homeController.napCatWebUiEnabled.get() ?? false;
+            // 重置 AstrBot WebView URL 并刷新
+            widget.astrBotController
+                .loadRequest(Uri.parse('http://127.0.0.1:6185'));
 
-            if (!napCatEnabled) {
-              Get.snackbar(
-                '无法访问',
-                'NapCat WebUI 未启用，请先在下方开关中启用',
-                snackPosition: SnackPosition.BOTTOM,
-                backgroundColor: Colors.orange,
-                colorText: Colors.white,
-                duration: const Duration(seconds: 3),
-              );
-              return;
-            }
-
-            // 切换到 NapCat 标签页（索引 1）
-            widget.onNavigate(1);
+            // 跳转到 AstrBot 标签页（索引 0）
+            widget.onNavigate(0);
 
             Get.snackbar(
               '已跳转',
-              '请在 NapCat 仪表盘中管理 QQ 登录',
+              'AstrBot 页面已重置并刷新',
               snackPosition: SnackPosition.BOTTOM,
               duration: const Duration(seconds: 2),
             );
@@ -551,9 +575,7 @@ class _SettingsPageState extends State<SettingsPage> {
 
               Get.snackbar(
                 value ? 'WebUI 已启用' : 'WebUI 已禁用',
-                value
-                  ? 'NapCat 标签页已显示，可以立即访问控制面板'
-                  : 'NapCat 标签页已隐藏',
+                value ? 'NapCat 标签页已显示，可以立即访问控制面板' : 'NapCat 标签页已隐藏',
                 snackPosition: SnackPosition.BOTTOM,
                 duration: const Duration(seconds: 2),
               );
@@ -567,7 +589,10 @@ class _SettingsPageState extends State<SettingsPage> {
             children: [
               const Text(
                 '自定义 WebView',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.grey),
+                style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.grey),
               ),
               const Spacer(),
               IconButton(
@@ -608,8 +633,10 @@ class _SettingsPageState extends State<SettingsPage> {
                       tooltip: '编辑',
                     ),
                     IconButton(
-                      icon: const Icon(Icons.delete, size: 20, color: Colors.red),
-                      onPressed: () => _confirmDeleteWebView(index, webview['title'] ?? 'WebUI'),
+                      icon:
+                          const Icon(Icons.delete, size: 20, color: Colors.red),
+                      onPressed: () => _confirmDeleteWebView(
+                          index, webview['title'] ?? 'WebUI'),
                       tooltip: '删除',
                     ),
                   ],

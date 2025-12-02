@@ -20,7 +20,7 @@ class _WebViewPageState extends State<WebViewPage> {
   int _currentIndex = 0;
   late final WebViewController _astrBotController;
   late final WebViewController _napCatController;
-  final Map<int, WebViewController> _customControllers = {}; // 存储自定义 WebView 控制器
+  final Map<String, WebViewController> _customControllers = {}; // 存储自定义 WebView 控制器，使用 URL 作为 key
   DateTime? _lastBackPressed;
 
   final HomeController homeController = Get.find<HomeController>();
@@ -35,6 +35,16 @@ class _WebViewPageState extends State<WebViewPage> {
     _initSystemUI();
     _initAstrBotController();
     _initNapCatController();
+
+    // 监听自定义 WebView 列表变化,清理已删除的控制器
+    ever(homeController.customWebViews, (List<Map<String, String>> webviews) {
+      // 清理不再存在的控制器
+      final validUrls = webviews.map((wv) => wv['url'] ?? '').toSet();
+      final controllersToRemove = _customControllers.keys.where((key) => !validUrls.contains(key)).toList();
+      for (final key in controllersToRemove) {
+        _customControllers.remove(key);
+      }
+    });
   }
 
   @override
@@ -169,11 +179,15 @@ class _WebViewPageState extends State<WebViewPage> {
   }
 
   // 获取或创建自定义 WebView 控制器
-  WebViewController _getCustomController(int index, String url) {
-    if (!_customControllers.containsKey(index)) {
-      _customControllers[index] = _createCustomController(url);
+  WebViewController _getCustomController(String url) {
+    // 如果控制器存在但URL已更改，删除旧控制器并创建新的
+    if (_customControllers.containsKey(url)) {
+      return _customControllers[url]!;
     }
-    return _customControllers[index]!;
+
+    // 创建新控制器
+    _customControllers[url] = _createCustomController(url);
+    return _customControllers[url]!;
   }
 
   void _injectClipboardScript(WebViewController controller) {
@@ -226,11 +240,14 @@ class _WebViewPageState extends State<WebViewPage> {
     // 检查是否是自定义 WebView 页面
     else if (_currentIndex >= customStartIndex && _currentIndex < terminalIndex) {
       int customIndex = _currentIndex - customStartIndex;
-      if (_customControllers.containsKey(customIndex)) {
-        final controller = _customControllers[customIndex]!;
-        if (await controller.canGoBack()) {
-          await controller.goBack();
-          return;
+      if (customIndex < customWebViews.length) {
+        final url = customWebViews[customIndex]['url'] ?? '';
+        if (_customControllers.containsKey(url)) {
+          final controller = _customControllers[url]!;
+          if (await controller.canGoBack()) {
+            await controller.goBack();
+            return;
+          }
         }
       }
     }
@@ -286,7 +303,7 @@ class _WebViewPageState extends State<WebViewPage> {
           final webview = customWebViews[index];
           final url = webview['url'] ?? '';
           return WebViewWidget(
-            controller: _getCustomController(index, url),
+            controller: _getCustomController(url),
           );
         }),
       ];
