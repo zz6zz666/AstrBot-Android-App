@@ -285,6 +285,15 @@ class _WebViewPageState extends State<WebViewPage> {
         }),
       ];
 
+      // 计算设置页的索引(始终是最后一个)
+      final int settingsIndex = pages.length;
+
+      // 确保 currentIndex 不超出范围
+      // 如果当前索引超出范围,说明用户在设置页,需要调整到正确的设置页索引
+      final int validCurrentIndex = _currentIndex > settingsIndex
+          ? settingsIndex
+          : _currentIndex;
+
       return PopScope(
         canPop: false,
         onPopInvokedWithResult: (didPop, result) async {
@@ -302,7 +311,7 @@ class _WebViewPageState extends State<WebViewPage> {
             body: SafeArea(
               top: true,
               child: IndexedStack(
-                index: _currentIndex,
+                index: validCurrentIndex,
                 children: [
                   ...pages,
 
@@ -320,7 +329,7 @@ class _WebViewPageState extends State<WebViewPage> {
               ),
             ),
             bottomNavigationBar: WebViewBottomNavBar(
-              currentIndex: _currentIndex,
+              currentIndex: validCurrentIndex,
               onTap: (index) {
                 setState(() {
                   _currentIndex = index;
