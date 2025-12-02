@@ -41,6 +41,10 @@ class WebViewBottomNavBar extends StatelessWidget {
           label: webview['title'] ?? 'WebUI',
         )),
         const BottomNavigationBarItem(
+          icon: Icon(Icons.terminal),
+          label: '终端',
+        ),
+        const BottomNavigationBarItem(
           icon: Icon(Icons.settings),
           label: '设置',
         ),

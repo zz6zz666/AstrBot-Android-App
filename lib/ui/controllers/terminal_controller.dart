@@ -80,9 +80,6 @@ class HomeController extends GetxController {
     if (pseudoTerminal == null) return;
 
     _webviewSubscription = pseudoTerminal!.output.cast<List<int>>().transform(const Utf8Decoder(allowMalformed: true)).listen((event) async {
-      // 先判断订阅是否已取消，避免重复处理
-      if (_webviewSubscription == null) return;
-
       // 输出到 Flutter 控制台
       // Output to Flutter console
       if (event.trim().isNotEmpty) {
@@ -104,7 +101,7 @@ class HomeController extends GetxController {
       if (event.contains('适配器已连接')) {
         _isAdapterConnected = true;
         bumpProgress();
-        
+
         // 如果应用当前在前台，则立即打开webview
         if (_isAppInForeground) {
           Future.microtask(() {
@@ -118,9 +115,7 @@ class HomeController extends GetxController {
           update();
         });
 
-        // 取消订阅，后续不再监听
-        await _webviewSubscription?.cancel();
-        _webviewSubscription = null; // 置空标记已取消
+        // 不取消订阅，继续监听以便终端日志持续更新
       }
       terminal.write(event);
     });

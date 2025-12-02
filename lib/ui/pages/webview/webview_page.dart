@@ -3,8 +3,10 @@ import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 import 'package:webview_flutter_android/webview_flutter_android.dart';
+import 'package:xterm/xterm.dart';
 import '../../controllers/terminal_controller.dart';
 import '../settings/settings_page.dart';
+import '../terminal/terminal_theme.dart';
 import '../../navbar/bottom_nav_bar.dart';
 
 class WebViewPage extends StatefulWidget {
@@ -203,22 +205,26 @@ class _WebViewPageState extends State<WebViewPage> {
     final bool napCatEnabled = homeController.napCatWebUiEnabledRx.value;
     final customWebViews = homeController.customWebViews;
 
+    // 计算终端页索引
+    int customStartIndex = napCatEnabled ? 2 : 1;
+    int terminalIndex = customStartIndex + customWebViews.length;
+
+    // 如果在终端页，不允许WebView回退，直接执行双击退出逻辑
+    if (_currentIndex == terminalIndex) {
+      // 执行双击退出逻辑（跳过WebView回退检查）
+    }
     // 如果当前是 AstrBot 页面且 WebView 可回退，则回退
-    if (_currentIndex == 0 && await _astrBotController.canGoBack()) {
+    else if (_currentIndex == 0 && await _astrBotController.canGoBack()) {
       await _astrBotController.goBack();
       return;
     }
-
     // 如果当前是 NapCat 页面且 WebView 可回退，则回退
-    if (napCatEnabled && _currentIndex == 1 && await _napCatController.canGoBack()) {
+    else if (napCatEnabled && _currentIndex == 1 && await _napCatController.canGoBack()) {
       await _napCatController.goBack();
       return;
     }
-
     // 检查是否是自定义 WebView 页面
-    int customStartIndex = napCatEnabled ? 2 : 1;
-    int customEndIndex = customStartIndex + customWebViews.length - 1;
-    if (_currentIndex >= customStartIndex && _currentIndex <= customEndIndex) {
+    else if (_currentIndex >= customStartIndex && _currentIndex < terminalIndex) {
       int customIndex = _currentIndex - customStartIndex;
       if (_customControllers.containsKey(customIndex)) {
         final controller = _customControllers[customIndex]!;
@@ -285,8 +291,8 @@ class _WebViewPageState extends State<WebViewPage> {
         }),
       ];
 
-      // 计算设置页的索引(始终是最后一个)
-      final int settingsIndex = pages.length;
+      // 计算设置页的索引(终端页在倒数第二,设置页在最后)
+      final int settingsIndex = pages.length + 1;
 
       // 确保 currentIndex 不超出范围
       // 如果当前索引超出范围,说明用户在设置页,需要调整到正确的设置页索引
@@ -315,7 +321,15 @@ class _WebViewPageState extends State<WebViewPage> {
                 children: [
                   ...pages,
 
-                  // 4. 软件设置页面
+                  // 4. 终端页面
+                  TerminalView(
+                    homeController.terminal,
+                    readOnly: false,
+                    backgroundOpacity: 1,
+                    theme: ManjaroTerminalTheme(),
+                  ),
+
+                  // 5. 软件设置页面
                   SettingsPage(
                     astrBotController: _astrBotController,
                     napCatController: _napCatController,
