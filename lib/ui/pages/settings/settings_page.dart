@@ -1,5 +1,7 @@
 import 'dart:io';
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 import 'package:global_repository/global_repository.dart';
@@ -73,10 +75,7 @@ class _SettingsPageState extends State<SettingsPage> {
           ],
         ),
         actions: [
-          TextButton(
-            onPressed: () => Get.back(),
-            child: const Text('取消'),
-          ),
+          TextButton(onPressed: () => Get.back(), child: const Text('取消')),
           TextButton(
             onPressed: () {
               final title = titleController.text.trim();
@@ -155,10 +154,7 @@ class _SettingsPageState extends State<SettingsPage> {
           ],
         ),
         actions: [
-          TextButton(
-            onPressed: () => Get.back(),
-            child: const Text('取消'),
-          ),
+          TextButton(onPressed: () => Get.back(), child: const Text('取消')),
           TextButton(
             onPressed: () {
               final title = titleController.text.trim();
@@ -204,10 +200,7 @@ class _SettingsPageState extends State<SettingsPage> {
         title: const Text('确认删除'),
         content: Text('确定要删除自定义 WebView "$title" 吗？'),
         actions: [
-          TextButton(
-            onPressed: () => Get.back(),
-            child: const Text('取消'),
-          ),
+          TextButton(onPressed: () => Get.back(), child: const Text('取消')),
           TextButton(
             onPressed: () {
               homeController.removeCustomWebView(index);
@@ -284,17 +277,14 @@ class _SettingsPageState extends State<SettingsPage> {
       }
 
       // 执行备份命令
-      final result = await Process.run(
-        '${RuntimeEnvir.binPath}/busybox',
-        [
-          'tar',
-          '-czf',
-          backupPath,
-          '-C',
-          '${scripts.ubuntuPath}/root/AstrBot',
-          'data'
-        ],
-      );
+      final result = await Process.run('${RuntimeEnvir.binPath}/busybox', [
+        'tar',
+        '-czf',
+        backupPath,
+        '-C',
+        '${scripts.ubuntuPath}/root/AstrBot',
+        'data',
+      ]);
 
       if (result.exitCode == 0) {
         final backupFile = File(backupPath);
@@ -333,6 +323,126 @@ class _SettingsPageState extends State<SettingsPage> {
     }
   }
 
+  // 显示快速登录QQ对话框
+  void _showQuickLoginDialog() async {
+    final webuiJsonPath = '${scripts.ubuntuPath}/root/napcat/config/webui.json';
+    final webuiJsonFile = File(webuiJsonPath);
+
+    // 检查文件是否存在
+    if (!await webuiJsonFile.exists()) {
+      Get.snackbar(
+        '错误',
+        'webui.json 文件不存在',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+        duration: const Duration(seconds: 3),
+      );
+      return;
+    }
+
+    // 读取并解析 JSON 文件
+    String currentQQ = '';
+    Map<String, dynamic> jsonData;
+    try {
+      final jsonContent = await webuiJsonFile.readAsString();
+      jsonData = jsonDecode(jsonContent) as Map<String, dynamic>;
+
+      // 检查是否存在 autoLoginAccount 字段
+      if (!jsonData.containsKey('autoLoginAccount')) {
+        Get.snackbar(
+          '错误',
+          '未找到 autoLoginAccount 字段',
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: Colors.red,
+          colorText: Colors.white,
+          duration: const Duration(seconds: 3),
+        );
+        return;
+      }
+
+      currentQQ = jsonData['autoLoginAccount']?.toString() ?? '';
+    } catch (e) {
+      Get.snackbar(
+        '错误',
+        '读取或解析 webui.json 失败: $e',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+        duration: const Duration(seconds: 3),
+      );
+      return;
+    }
+
+    // 显示编辑对话框
+    final qqController = TextEditingController(text: currentQQ);
+
+    final result = await Get.dialog<bool>(
+      AlertDialog(
+        title: const Text('快速登录QQ'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: qqController,
+              decoration: const InputDecoration(
+                labelText: 'QQ号',
+                hintText: '请输入QQ号',
+                border: OutlineInputBorder(),
+              ),
+              keyboardType: TextInputType.number,
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Get.back(result: false),
+            child: const Text('取消'),
+          ),
+          TextButton(
+            onPressed: () => Get.back(result: true),
+            child: const Text('保存'),
+          ),
+        ],
+      ),
+    );
+
+    // 如果用户点击了保存
+    if (result == true) {
+      final newQQ = qqController.text.trim();
+
+      try {
+        // 更新 JSON 数据
+        jsonData['autoLoginAccount'] = newQQ;
+
+        // 写回文件
+        await webuiJsonFile.writeAsString(
+          const JsonEncoder.withIndent('    ').convert(jsonData),
+        );
+
+        Get.snackbar(
+          '保存成功',
+          'QQ号已更新为: $newQQ',
+          snackPosition: SnackPosition.BOTTOM,
+          duration: const Duration(seconds: 2),
+        );
+        Log.i('自动登录QQ号已更新: $newQQ', tag: 'AstrBot');
+      } catch (e) {
+        Get.snackbar(
+          '保存失败',
+          '写入 webui.json 失败: $e',
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: Colors.red,
+          colorText: Colors.white,
+          duration: const Duration(seconds: 3),
+        );
+        Log.e('保存自动登录QQ号失败: $e', tag: 'AstrBot');
+      }
+    }
+
+    qqController.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
     return ListView(
@@ -348,7 +458,8 @@ class _SettingsPageState extends State<SettingsPage> {
           leading: const Icon(Icons.info_outline),
           title: const Text('软件版本'),
           subtitle: Text(
-              _appVersion.isEmpty ? '加载中...' : 'AstrBot Android v$_appVersion'),
+            _appVersion.isEmpty ? '加载中...' : 'AstrBot Android v$_appVersion',
+          ),
           onTap: () {},
         ),
         ListTile(
@@ -368,13 +479,17 @@ class _SettingsPageState extends State<SettingsPage> {
                   ),
                   TextButton(
                     onPressed: () => Get.back(result: 'no_backup'),
-                    child: const Text('直接重装',
-                        style: TextStyle(color: Colors.orange)),
+                    child: const Text(
+                      '直接重装',
+                      style: TextStyle(color: Colors.orange),
+                    ),
                   ),
                   TextButton(
                     onPressed: () => Get.back(result: 'backup'),
-                    child: const Text('备份后重装',
-                        style: TextStyle(color: Colors.blue)),
+                    child: const Text(
+                      '备份后重装',
+                      style: TextStyle(color: Colors.blue),
+                    ),
                   ),
                 ],
               ),
@@ -411,8 +526,10 @@ class _SettingsPageState extends State<SettingsPage> {
                       ),
                       TextButton(
                         onPressed: () => Get.back(result: true),
-                        child: const Text('继续重装',
-                            style: TextStyle(color: Colors.red)),
+                        child: const Text(
+                          '继续重装',
+                          style: TextStyle(color: Colors.red),
+                        ),
                       ),
                     ],
                   ),
@@ -436,8 +553,10 @@ class _SettingsPageState extends State<SettingsPage> {
                   ),
                   TextButton(
                     onPressed: () => Get.back(result: true),
-                    child:
-                        const Text('确定重装', style: TextStyle(color: Colors.red)),
+                    child: const Text(
+                      '确定重装',
+                      style: TextStyle(color: Colors.red),
+                    ),
                   ),
                 ],
               ),
@@ -498,8 +617,10 @@ class _SettingsPageState extends State<SettingsPage> {
                   ),
                   TextButton(
                     onPressed: () => Get.back(result: true),
-                    child: const Text('确定',
-                        style: TextStyle(color: Colors.orange)),
+                    child: const Text(
+                      '确定',
+                      style: TextStyle(color: Colors.orange),
+                    ),
                   ),
                 ],
               ),
@@ -549,8 +670,9 @@ class _SettingsPageState extends State<SettingsPage> {
           subtitle: const Text('重置并刷新 AstrBot 页面'),
           onTap: () {
             // 重置 AstrBot WebView URL 并刷新
-            widget.astrBotController
-                .loadRequest(Uri.parse('http://127.0.0.1:6185'));
+            widget.astrBotController.loadRequest(
+              Uri.parse('http://127.0.0.1:6185'),
+            );
 
             // 跳转到 AstrBot 标签页（索引 0）
             widget.onNavigate(0);
@@ -562,6 +684,32 @@ class _SettingsPageState extends State<SettingsPage> {
               duration: const Duration(seconds: 2),
             );
           },
+        ),
+        Obx(() {
+          final token = homeController.napCatWebUiToken.value;
+          return ListTile(
+            leading: const Icon(Icons.vpn_key),
+            title: const Text('NapCat登录token'),
+            subtitle: Text(token.isEmpty ? '暂未获取到token' : token),
+            onTap: token.isEmpty
+                ? null
+                : () async {
+                    final fullUrl = 'http://localhost:6099/webui?token=$token';
+                    await Clipboard.setData(ClipboardData(text: fullUrl));
+                    Get.snackbar(
+                      '已复制',
+                      '完整登录链接已复制到剪贴板',
+                      snackPosition: SnackPosition.BOTTOM,
+                      duration: const Duration(seconds: 2),
+                    );
+                  },
+          );
+        }),
+        ListTile(
+          leading: const Icon(Icons.login),
+          title: const Text('快速登录QQ'),
+          subtitle: const Text('配置自动登录的QQ账号'),
+          onTap: () => _showQuickLoginDialog(),
         ),
         ListTile(
           leading: const Icon(Icons.web),
@@ -590,9 +738,10 @@ class _SettingsPageState extends State<SettingsPage> {
               const Text(
                 '自定义 WebView',
                 style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.grey),
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.grey,
+                ),
               ),
               const Spacer(),
               IconButton(
@@ -633,10 +782,15 @@ class _SettingsPageState extends State<SettingsPage> {
                       tooltip: '编辑',
                     ),
                     IconButton(
-                      icon:
-                          const Icon(Icons.delete, size: 20, color: Colors.red),
+                      icon: const Icon(
+                        Icons.delete,
+                        size: 20,
+                        color: Colors.red,
+                      ),
                       onPressed: () => _confirmDeleteWebView(
-                          index, webview['title'] ?? 'WebUI'),
+                        index,
+                        webview['title'] ?? 'WebUI',
+                      ),
                       tooltip: '删除',
                     ),
                   ],
