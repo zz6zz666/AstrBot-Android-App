@@ -53,6 +53,7 @@ class WebViewBottomNavBar extends StatelessWidget {
       return BottomNavigationBar(
         currentIndex: currentIndex >= navItems.length ? navItems.length - 1 : currentIndex,
         onTap: onTap,
+        type: BottomNavigationBarType.fixed,
         backgroundColor: Colors.white,
         selectedItemColor: Theme.of(context).primaryColor,
         unselectedItemColor: Colors.grey,
