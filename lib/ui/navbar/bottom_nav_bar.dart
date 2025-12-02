@@ -37,9 +37,9 @@ class WebViewBottomNavBar extends StatelessWidget {
           ),
         // 添加自定义 WebView 项（地球图标）
         ...customWebViews.map((webview) => BottomNavigationBarItem(
-          icon: const Icon(Icons.language),
-          label: webview['title'] ?? 'WebUI',
-        )),
+              icon: const Icon(Icons.language),
+              label: webview['title'] ?? 'WebUI',
+            )),
         const BottomNavigationBarItem(
           icon: Icon(Icons.terminal),
           label: '终端',
@@ -51,9 +51,11 @@ class WebViewBottomNavBar extends StatelessWidget {
       ];
 
       return BottomNavigationBar(
-        currentIndex: currentIndex >= navItems.length ? navItems.length - 1 : currentIndex,
+        currentIndex: currentIndex >= navItems.length
+            ? navItems.length - 1
+            : currentIndex,
         onTap: onTap,
-        type: BottomNavigationBarType.fixed,
+        type: BottomNavigationBarType.shifting,
         backgroundColor: Colors.white,
         selectedItemColor: Theme.of(context).primaryColor,
         unselectedItemColor: Colors.grey,
