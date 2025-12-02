@@ -220,7 +220,7 @@ class _WebViewPageState extends State<WebViewPage> {
       final backupFileName = 'AstrBot-backup-$timestamp.tar.gz';
       final backupPath = '${backupDir.path}/$backupFileName';
       
-      // 数据目录路径
+      // 使用 tar 命令压缩 data 目录
       final dataPath = '${scripts.ubuntuPath}/root/AstrBot/data';
       final dataDir = Directory(dataPath);
       
@@ -235,13 +235,14 @@ class _WebViewPageState extends State<WebViewPage> {
         return false;
       }
       
-      // 使用 archive 包创建 tar.gz 压缩文件
-      final encoder = TarFileEncoder();
-      encoder.tarDirectory(dataDir, filename: backupPath);
+      // 执行备份命令
+      final result = await Process.run(
+        '${RuntimeEnvir.binPath}/busybox',
+        ['tar', '-czf', backupPath, '-C', '${scripts.ubuntuPath}/root/AstrBot', 'data'],
+      );
       
-      // 检查备份文件
-      final backupFile = File(backupPath);
-      if (await backupFile.exists()) {
+      if (result.exitCode == 0) {
+        final backupFile = File(backupPath);
         final fileSize = await backupFile.length();
         final fileSizeMB = (fileSize / 1024 / 1024).toStringAsFixed(2);
         
@@ -256,12 +257,12 @@ class _WebViewPageState extends State<WebViewPage> {
       } else {
         Get.snackbar(
           '备份失败',
-          '备份文件创建失败',
+          '错误: ${result.stderr}',
           snackPosition: SnackPosition.BOTTOM,
           backgroundColor: Colors.red,
           colorText: Colors.white,
         );
-        Log.e('备份失败: 文件不存在', tag: 'AstrBot');
+        Log.e('备份失败: ${result.stderr}', tag: 'AstrBot');
         return false;
       }
     } catch (e) {
