@@ -65,7 +65,7 @@ class _SettingsPageState extends State<SettingsPage> {
               decoration: const InputDecoration(
                 labelText: 'URL',
                 hintText: '例如：6099/webui?token=***',
-                helperText: '自动添加前缀 https://127.0.0.1: 若需使用http,请手动添加',
+                helperText: '自动添加前缀 http://127.0.0.1: 若需使用https,请手动输入完整URL',
                 border: OutlineInputBorder(),
               ),
               keyboardType: TextInputType.url,
@@ -93,9 +93,9 @@ class _SettingsPageState extends State<SettingsPage> {
                 return;
               }
 
-              // 如果URL不包含协议前缀,自动添加 https://127.0.0.1:
+              // 如果URL不包含协议前缀,自动添加 http://127.0.0.1:
               if (!url.startsWith('http://') && !url.startsWith('https://')) {
-                url = 'https://127.0.0.1:$url';
+                url = 'http://127.0.0.1:$url';
               }
 
               homeController.addCustomWebView(title, url);
@@ -147,7 +147,7 @@ class _SettingsPageState extends State<SettingsPage> {
               controller: urlController,
               decoration: const InputDecoration(
                 labelText: 'URL',
-                helperText: '自动添加前缀 https://127.0.0.1: 若需使用http,请手动添加',
+                helperText: '自动添加前缀 http://127.0.0.1: 若需使用https,请手动输入完整URL',
                 border: OutlineInputBorder(),
               ),
               keyboardType: TextInputType.url,
@@ -175,9 +175,9 @@ class _SettingsPageState extends State<SettingsPage> {
                 return;
               }
 
-              // 如果URL不包含协议前缀,自动添加 https://127.0.0.1:
+              // 如果URL不包含协议前缀,自动添加 http://127.0.0.1:
               if (!url.startsWith('http://') && !url.startsWith('https://')) {
-                url = 'https://127.0.0.1:$url';
+                url = 'http://127.0.0.1:$url';
               }
 
               homeController.updateCustomWebView(index, title, url);
