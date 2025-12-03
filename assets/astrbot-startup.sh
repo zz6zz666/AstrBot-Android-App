@@ -232,6 +232,8 @@ install_astrbot(){
 
   rm -rf "$CLONE_TEMP_DIR"
 
+  killall uv 2>/dev/null
+
   # 检查是否已安装
   if [ ! -d "$INSTALL_DIR" ]; then
     cd $HOME
