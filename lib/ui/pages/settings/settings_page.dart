@@ -864,6 +864,107 @@ class _SettingsPageState extends State<SettingsPage> {
     commandController.dispose();
   }
 
+  // 打开文件管理器并导航到 AstrBot Ubuntu 文件系统位置
+  Future<void> _openFileManager() async {
+    try {
+      // 使用 DocumentsProvider 的 content URI 打开文件管理器
+      // authority: com.astrbot.astrbot_android.documents
+      // rootId: ubuntu_root
+      final contentUri = Uri.parse(
+        'content://com.astrbot.astrbot_android.documents/root/ubuntu_root',
+      );
+
+      if (await canLaunchUrl(contentUri)) {
+        await launchUrl(
+          contentUri,
+          mode: LaunchMode.externalApplication,
+        );
+
+        Get.snackbar(
+          '已打开',
+          '已在文件管理器中打开 AstrBot Ubuntu 文件系统',
+          snackPosition: SnackPosition.BOTTOM,
+          duration: const Duration(seconds: 2),
+        );
+      } else {
+        // 如果无法打开，提供备选方案
+        Get.dialog(
+          AlertDialog(
+            title: const Text('打开文件系统'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Ubuntu 文件系统已挂载至系统"文件"应用的侧栏，名称为:',
+                  style: TextStyle(fontSize: 14),
+                ),
+                const SizedBox(height: 8),
+                const Text(
+                  'AstrBot Ubuntu',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.blue,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                const Text(
+                  '你可以手动打开系统"文件"应用，在侧栏中找到"AstrBot Ubuntu"来访问。',
+                  style: TextStyle(fontSize: 12, color: Colors.grey),
+                ),
+                const SizedBox(height: 8),
+                const Text(
+                  '或使用 MT 文件管理器等应用，添加以下路径至侧栏:',
+                  style: TextStyle(fontSize: 12, color: Colors.grey),
+                ),
+                const SizedBox(height: 8),
+                SelectableText(
+                  scripts.ubuntuPath,
+                  style: const TextStyle(
+                    fontSize: 11,
+                    fontFamily: 'monospace',
+                    color: Colors.blue,
+                  ),
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () async {
+                  await Clipboard.setData(
+                      ClipboardData(text: scripts.ubuntuPath));
+                  Get.back();
+                  Get.snackbar(
+                    '已复制',
+                    '路径已复制到剪贴板',
+                    snackPosition: SnackPosition.BOTTOM,
+                    duration: const Duration(seconds: 2),
+                  );
+                },
+                child: const Text('复制路径'),
+              ),
+              TextButton(
+                onPressed: () => Get.back(),
+                child: const Text('关闭'),
+              ),
+            ],
+          ),
+        );
+      }
+    } catch (e) {
+      Log.e('打开文件管理器失败: $e', tag: 'AstrBot');
+      Get.snackbar(
+        '打开失败',
+        '无法打开文件管理器: $e',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+        duration: const Duration(seconds: 3),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return ListView(
@@ -1349,6 +1450,14 @@ class _SettingsPageState extends State<SettingsPage> {
           title: const Text('自定义 Git Clone 命令'),
           subtitle: const Text('自定义 AstrBot 的获取方式'),
           onTap: () => _showCustomGitCloneDialog(),
+        ),
+        ListTile(
+          leading: const Icon(Icons.folder),
+          title: const Text('文件系统'),
+          subtitle: const Text(
+            '内置 Ubuntu 文件系统已挂载至 \'文件\'\n可添加至 MT 文件管理器侧栏以快捷访问',
+          ),
+          onTap: () => _openFileManager(),
         ),
         ListTile(
           leading: const Icon(Icons.delete_outline),
