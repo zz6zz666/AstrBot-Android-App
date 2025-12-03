@@ -317,6 +317,8 @@ install_astrbot(){
 
     # 原子性重命名
     mv "$CLONE_TEMP_DIR" "$INSTALL_DIR"
+
+    cd "$INSTALL_DIR"
     
     # 使用 uv sync 同步依赖
     echo "同步 AstrBot 依赖..."
