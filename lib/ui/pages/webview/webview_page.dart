@@ -32,12 +32,16 @@ class _WebViewPageState extends State<WebViewPage> {
   // Flag for AstrBot WebView initialization
   bool _astrBotInitialized = false;
 
+  // 应用生命周期观察者
+  late final LifecycleObserver _lifecycleObserver;
+
   @override
   void initState() {
     super.initState();
     _initSystemUI();
     _initAstrBotController();
     _initNapCatController();
+    _initLifecycleObserver();
 
     // 监听自定义 WebView 列表变化,清理已删除的控制器
     ever(homeController.customWebViews, (List<Map<String, String>> webviews) {
@@ -53,6 +57,8 @@ class _WebViewPageState extends State<WebViewPage> {
   @override
   void dispose() {
     _restoreSystemUI();
+    // 移除生命周期观察者
+    WidgetsBinding.instance.removeObserver(_lifecycleObserver);
     super.dispose();
   }
 
@@ -461,6 +467,38 @@ class _WebViewPageState extends State<WebViewPage> {
     final clipboardData = await Clipboard.getData(Clipboard.kTextPlain);
     final text = clipboardData?.text ?? '';
     controller.runJavaScript('window.clipboardText = "$text";');
+  }
+
+  // 初始化生命周期观察者
+  void _initLifecycleObserver() {
+    _lifecycleObserver = LifecycleObserver(
+      onResume: () {
+        // 应用回到前台时重新加载所有 WebView
+        debugPrint('App resumed, reloading all WebViews');
+        _reloadAllWebViews();
+      },
+      onPause: () {
+        // 应用切换到后台
+        debugPrint('App paused');
+      },
+    );
+    WidgetsBinding.instance.addObserver(_lifecycleObserver);
+  }
+
+  // 重新加载所有 WebView
+  void _reloadAllWebViews() {
+    // 重新加载 AstrBot WebView
+    _astrBotController.reload();
+
+    // 重新加载 NapCat WebView（如果启用）
+    if (homeController.napCatWebUiEnabledRx.value) {
+      _napCatController.reload();
+    }
+
+    // 重新加载所有自定义 WebView
+    for (final controller in _customControllers.values) {
+      controller.reload();
+    }
   }
 
   @override
