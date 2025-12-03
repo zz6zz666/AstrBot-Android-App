@@ -8,8 +8,7 @@ String prootDistroPath = '${RuntimeEnvir.usrPath}/var/lib/proot-distro';
 String ubuntuPath = '$prootDistroPath/installed-rootfs/ubuntu';
 String ubuntuName = Config.ubuntuFileName.replaceAll(RegExp('-pd.*'), '');
 
-String common =
-    '''
+String common = '''
 export TMPDIR=${RuntimeEnvir.tmpPath}
 export BIN=${RuntimeEnvir.binPath}
 export HOME_PATH=${RuntimeEnvir.homePath}
@@ -74,22 +73,6 @@ EOF
 String installUbuntu = r'''
 install_ubuntu(){
   echo "==== install_ubuntu start ===="
-  echo "[inspect] UBUNTU_PATH=$UBUNTU_PATH"
-  echo "[inspect] UBUNTU archive=$HOME/$UBUNTU"
-  echo "[inspect] UBUNTU_NAME=$UBUNTU_NAME"
-  echo "[inspect] TMPDIR=${TMPDIR:-unknown}"
-
-  echo "[before mkdir] ls -ld:"
-  ls -ld "$UBUNTU_PATH" 2>/dev/null || echo "  -> dir missing"
-  echo "[before mkdir] ls -A:"
-  ls -A "$UBUNTU_PATH" 2>/dev/null || echo "  -> dir missing or empty"
-
-  mkdir -p $UBUNTU_PATH 2>/dev/null
-
-  echo "[after mkdir] ls -ld:"
-  ls -ld "$UBUNTU_PATH" 2>/dev/null || echo "  -> dir still missing?!"
-  echo "[after mkdir] ls -A:"
-  ls -A "$UBUNTU_PATH" 2>/dev/null || echo "  -> dir empty"
 
   NEED_INSTALL=0
   if [ ! -d "$UBUNTU_PATH/bin" ]; then
@@ -128,7 +111,7 @@ install_ubuntu(){
     fi
     echo "[state] TAR_ARGS=$TAR_ARGS"
     progress_echo "Ubuntu $L_NOT_INSTALLED, $L_INSTALLING..."
-    ls -l ~/$UBUNTU
+
     echo "[cmd] busybox tar $TAR_ARGS ~/$UBUNTU -C $UBUNTU_PATH/"
     if busybox tar $TAR_ARGS ~/$UBUNTU -C $UBUNTU_PATH/ | while read line; do
       # echo -ne "\033[2K\0337\r$line\0338"
@@ -162,7 +145,7 @@ install_ubuntu(){
     VERSION=`cat $UBUNTU_PATH/etc/issue.net 2>/dev/null`
     # VERSION=`cat $UBUNTU_PATH/etc/issue 2>/dev/null | sed 's/\\n//g' | sed 's/\\l//g'`
     progress_echo "Ubuntu $L_INSTALLED -> $VERSION"
-    ls -A "$UBUNTU_PATH"
+
   fi
   change_ubuntu_source
   echo 'nameserver 8.8.8.8' > $UBUNTU_PATH/etc/resolv.conf
@@ -501,13 +484,23 @@ login_ubuntu(){
 String copyFiles = r'''
 copy_files(){
   mkdir -p $UBUNTU_PATH/root
-  cp ~/astrbot-startup.sh $UBUNTU_PATH/root/astrbot-startup.sh
+  # 只在启动脚本存在且包含 CUSTOM_GIT_CLONE 变量时才不替换，其他情况都要替换
+  SHOULD_COPY=1
+  if [ -f "$UBUNTU_PATH/root/astrbot-startup.sh" ]; then
+    if head -n 20 "$UBUNTU_PATH/root/astrbot-startup.sh" | grep -q "CUSTOM_GIT_CLONE"; then
+      SHOULD_COPY=0
+    fi
+  fi
+  if [ "$SHOULD_COPY" -eq 1 ]; then
+    cp ~/astrbot-startup.sh $UBUNTU_PATH/root/astrbot-startup.sh
+    echo "未监测到启动脚本及自定义配置(CUSTOM_GIT_CLONE)，已更新启动脚本"
+  fi
+  # cmd_config.json 每次都复制（保持原有逻辑）
   cp ~/cmd_config.json $UBUNTU_PATH/root/cmd_config.json
 }
 ''';
 
-String commonScript =
-    '''
+String commonScript = '''
 $common
 $changeUbuntuNobleSource
 $installUbuntu

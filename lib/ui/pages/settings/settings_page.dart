@@ -443,6 +443,127 @@ class _SettingsPageState extends State<SettingsPage> {
     qqController.dispose();
   }
 
+  // 显示自定义 Git Clone 对话框
+  void _showCustomGitCloneDialog() async {
+    final scriptPath = '${scripts.ubuntuPath}/root/astrbot-startup.sh';
+    final scriptFile = File(scriptPath);
+
+    // 检查脚本文件是否存在
+    if (!await scriptFile.exists()) {
+      Get.snackbar(
+        '提示',
+        '启动脚本文件不存在，请先启动一次应用',
+        snackPosition: SnackPosition.BOTTOM,
+        duration: const Duration(seconds: 2),
+      );
+      return;
+    }
+
+    // 读取当前的自定义 Git Clone 命令
+    String currentCommand = '';
+    try {
+      final content = await scriptFile.readAsString();
+      final match = RegExp(r'^CUSTOM_GIT_CLONE="([^"]*)"$', multiLine: true)
+          .firstMatch(content);
+      if (match != null) {
+        currentCommand = match.group(1) ?? '';
+      }
+    } catch (e) {
+      Get.snackbar(
+        '错误',
+        '读取启动脚本失败: $e',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+        duration: const Duration(seconds: 3),
+      );
+      return;
+    }
+
+    // 显示编辑对话框
+    final commandController = TextEditingController(text: currentCommand);
+
+    final result = await Get.dialog<bool>(
+      AlertDialog(
+        title: const Text('自定义 Git Clone 命令'),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                '自定义 AstrBot 的 Git Clone 命令，留空则使用默认逻辑（从镜像源获取最新 tag）。',
+                style: TextStyle(fontSize: 12, color: Colors.grey),
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                '示例：\ngit clone https://github.com/AstrBotDevs/AstrBot.git',
+                style: TextStyle(fontSize: 11, color: Colors.grey),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: commandController,
+                decoration: const InputDecoration(
+                  labelText: 'Git Clone 命令',
+                  hintText: '留空使用默认逻辑',
+                  border: OutlineInputBorder(),
+                ),
+                maxLines: 3,
+                keyboardType: TextInputType.multiline,
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Get.back(result: false),
+            child: const Text('取消'),
+          ),
+          TextButton(
+            onPressed: () => Get.back(result: true),
+            child: const Text('保存'),
+          ),
+        ],
+      ),
+    );
+
+    if (result == true) {
+      final newCommand = commandController.text.trim();
+
+      try {
+        String content = await scriptFile.readAsString();
+
+        // 替换 CUSTOM_GIT_CLONE 变量的值
+        content = content.replaceFirst(
+          RegExp(r'^CUSTOM_GIT_CLONE="[^"]*"$', multiLine: true),
+          'CUSTOM_GIT_CLONE="$newCommand"',
+        );
+
+        await scriptFile.writeAsString(content);
+        Log.i('已更新自定义 Git Clone 命令: $newCommand', tag: 'AstrBot');
+
+        Get.snackbar(
+          '保存成功',
+          newCommand.isEmpty ? '已清除自定义命令，将使用默认逻辑' : '自定义 Git Clone 命令已保存',
+          snackPosition: SnackPosition.BOTTOM,
+          duration: const Duration(seconds: 2),
+        );
+      } catch (e) {
+        Get.snackbar(
+          '保存失败',
+          '写入启动脚本失败: $e',
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: Colors.red,
+          colorText: Colors.white,
+          duration: const Duration(seconds: 3),
+        );
+        Log.e('保存自定义 Git Clone 命令失败: $e', tag: 'AstrBot');
+      }
+    }
+
+    commandController.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
     return ListView(
@@ -685,6 +806,118 @@ class _SettingsPageState extends State<SettingsPage> {
             );
           },
         ),
+        ListTile(
+          leading: const Icon(Icons.refresh),
+          title: const Text('重置 Python 环境'),
+          subtitle: const Text('删除虚拟环境并重启应用，启动时将自动重建'),
+          onTap: () async {
+            // 显示确认对话框
+            final confirmed = await Get.dialog<bool>(
+              AlertDialog(
+                title: const Text('确认重置'),
+                content: const Text(
+                  '此操作将删除 Python 虚拟环境（.venv 目录）并退出应用。\n'
+                  '下次启动时会自动重建环境并安装所有插件依赖。\n\n'
+                  '是否继续？',
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () => Get.back(result: false),
+                    child: const Text('取消'),
+                  ),
+                  TextButton(
+                    onPressed: () => Get.back(result: true),
+                    child: const Text('确认'),
+                  ),
+                ],
+              ),
+            );
+
+            if (confirmed == true) {
+              try {
+                final venvPath = '${scripts.ubuntuPath}/root/AstrBot/.venv';
+                final venvDir = Directory(venvPath);
+
+                if (await venvDir.exists()) {
+                  await venvDir.delete(recursive: true);
+                  Log.i('已删除 Python 虚拟环境: $venvPath', tag: 'AstrBot');
+
+                  Get.snackbar(
+                    '重置成功',
+                    'Python 环境已删除，应用即将退出',
+                    snackPosition: SnackPosition.BOTTOM,
+                    duration: const Duration(seconds: 2),
+                  );
+
+                  // 等待提示显示后退出应用
+                  await Future.delayed(const Duration(seconds: 2));
+                  exit(0);
+                } else {
+                  Get.snackbar(
+                    '提示',
+                    '虚拟环境目录不存在',
+                    snackPosition: SnackPosition.BOTTOM,
+                    duration: const Duration(seconds: 2),
+                  );
+                }
+              } catch (e) {
+                Log.e('删除 Python 虚拟环境失败: $e', tag: 'AstrBot');
+                Get.snackbar(
+                  '操作失败',
+                  '删除虚拟环境失败: $e',
+                  snackPosition: SnackPosition.BOTTOM,
+                  duration: const Duration(seconds: 3),
+                );
+              }
+            }
+          },
+        ),
+        ListTile(
+          leading: const Icon(Icons.build),
+          title: const Text('覆盖安装插件依赖'),
+          subtitle: const Text('下次启动时重新扫描并安装所有插件依赖'),
+          onTap: () async {
+            try {
+              final scriptPath = '${scripts.ubuntuPath}/root/astrbot-startup.sh';
+              final scriptFile = File(scriptPath);
+
+              if (await scriptFile.exists()) {
+                String content = await scriptFile.readAsString();
+
+                // 将 REINSTALL_PLUGINS_FLAG=0 修改为 REINSTALL_PLUGINS_FLAG=1
+                content = content.replaceFirst(
+                  RegExp(r'^REINSTALL_PLUGINS_FLAG=0$', multiLine: true),
+                  'REINSTALL_PLUGINS_FLAG=1',
+                );
+
+                await scriptFile.writeAsString(content);
+                Log.i('已设置插件依赖重装标记', tag: 'AstrBot');
+
+                Get.snackbar(
+                  '设置成功',
+                  '下次启动时将重新安装所有插件依赖',
+                  snackPosition: SnackPosition.BOTTOM,
+                  duration: const Duration(seconds: 2),
+                );
+              } else {
+                Get.snackbar(
+                  '提示',
+                  '启动脚本文件不存在，请先启动一次应用',
+                  snackPosition: SnackPosition.BOTTOM,
+                  duration: const Duration(seconds: 2),
+                );
+              }
+            } catch (e) {
+              Log.e('设置重装标记失败: $e', tag: 'AstrBot');
+              Get.snackbar(
+                '操作失败',
+                '设置重装标记失败: $e',
+                snackPosition: SnackPosition.BOTTOM,
+                duration: const Duration(seconds: 3),
+              );
+            }
+          },
+        ),
         Obx(() {
           final token = homeController.napCatWebUiToken.value;
           return ListTile(
@@ -799,6 +1032,24 @@ class _SettingsPageState extends State<SettingsPage> {
             }),
           );
         }),
+        const Divider(),
+        const Padding(
+          padding: EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+          child: Text(
+            '高级设置',
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.bold,
+              color: Colors.grey,
+            ),
+          ),
+        ),
+        ListTile(
+          leading: const Icon(Icons.code),
+          title: const Text('自定义 Git Clone 命令'),
+          subtitle: const Text('自定义 AstrBot 的获取方式'),
+          onTap: () => _showCustomGitCloneDialog(),
+        ),
         ListTile(
           leading: const Icon(Icons.backup),
           title: const Text('备份 AstrBot 数据'),

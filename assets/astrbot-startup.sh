@@ -1,5 +1,11 @@
 #!/bin/bash
 
+# 自定义 Git Clone 命令（为空时使用默认逻辑）
+CUSTOM_GIT_CLONE=""
+
+# 重装插件依赖标记（1表示需要重装，执行后自动清除）
+REINSTALL_PLUGINS_FLAG=0
+
 export UV_LINK_MODE=copy
 export UV_DEFAULT_INDEX="https://pypi.tuna.tsinghua.edu.cn/simple"
 export UV_PYTHON_INSTALL_MIRROR="https://ghfast.top/https://github.com/astral-sh/python-build-standalone/releases/download"
@@ -215,18 +221,15 @@ install_napcat(){
 }
 EOF
   fi
-    progress_echo "Napcat $L_INSTALLED"
-  else
-    progress_echo "Napcat $L_INSTALLED"
-  fi
-
+fi
+  progress_echo "Napcat $L_INSTALLED"
 }
 
 install_astrbot(){
   local INSTALL_DIR="$HOME/AstrBot"
   local CLONE_TEMP_DIR="$HOME/AstrBot_tmp"
   local BACKUP_DIR="/sdcard/Download/AstrBot"
-  
+
   rm -rf "$CLONE_TEMP_DIR"
 
   # 检查是否已安装
@@ -238,23 +241,41 @@ install_astrbot(){
     # 克隆仓库（失败直接退出）
     echo "正在获取 AstrBot 最新版本..."
 
-    # 获取最新的 tag
-    LATEST_TAG=$(git ls-remote --tags --sort='-v:refname' ${target_proxy:+${target_proxy}/}https://github.com/AstrBotDevs/AstrBot.git | head -n 1 | awk -F'/' '{print $3}')
-    
-    if [ -z "$LATEST_TAG" ]; then
-      echo "警告: 无法获取最新 tag，使用 main 分支"
-      CLONE_BRANCH="main"
+    # 判断是否使用自定义 git clone 命令
+    if [ -n "$CUSTOM_GIT_CLONE" ]; then
+      echo "使用自定义 Git Clone 命令..."
+      echo "执行: $CUSTOM_GIT_CLONE"
+      # 执行自定义命令，假设克隆到当前目录，然后重命名为临时目录
+      if ! eval "$CUSTOM_GIT_CLONE"; then
+        echo "自定义 Git Clone 命令执行失败"
+        exit 1
+      fi
+      # 查找克隆后的目录（通常是 AstrBot）
+      if [ -d "AstrBot" ]; then
+        mv "AstrBot" "$CLONE_TEMP_DIR"
+      else
+        echo "错误: 自定义 git clone 后未找到 AstrBot 目录"
+        exit 1
+      fi
     else
-      echo "最新版本: $LATEST_TAG"
-      CLONE_BRANCH="$LATEST_TAG"
-    fi
-    
-    # 克隆到临时目录
-    echo "正在克隆 AstrBot 仓库 (分支/标签: $CLONE_BRANCH)..."
-    if ! git clone --depth=1 --branch "$CLONE_BRANCH" ${target_proxy:+${target_proxy}/}https://github.com/AstrBotDevs/AstrBot.git "$CLONE_TEMP_DIR"; then
-      echo "克隆 AstrBot 仓库失败"
-      rm -rf "$CLONE_TEMP_DIR"  # 清理失败的临时目录
-      exit 1
+      # 使用默认逻辑：获取最新的 tag
+      LATEST_TAG=$(git ls-remote --tags --sort='-v:refname' ${target_proxy:+${target_proxy}/}https://github.com/AstrBotDevs/AstrBot.git | head -n 1 | awk -F'/' '{print $3}')
+
+      if [ -z "$LATEST_TAG" ]; then
+        echo "警告: 无法获取最新 tag，使用 main 分支"
+        CLONE_BRANCH="main"
+      else
+        echo "最新版本: $LATEST_TAG"
+        CLONE_BRANCH="$LATEST_TAG"
+      fi
+
+      # 克隆到临时目录
+      echo "正在克隆 AstrBot 仓库 (分支/标签: $CLONE_BRANCH)..."
+      if ! git clone --depth=1 --branch "$CLONE_BRANCH" ${target_proxy:+${target_proxy}/}https://github.com/AstrBotDevs/AstrBot.git "$CLONE_TEMP_DIR"; then
+        echo "克隆 AstrBot 仓库失败"
+        rm -rf "$CLONE_TEMP_DIR"  # 清理失败的临时目录
+        exit 1
+      fi
     fi
     
     mkdir "$CLONE_TEMP_DIR/data"
@@ -272,21 +293,8 @@ install_astrbot(){
         if tar -xzf "$LATEST_BACKUP" -C "$CLONE_TEMP_DIR"; then
           echo "备份恢复成功"
           progress_echo "AstrBot 数据已从备份恢复"
-          
-          # 扫描所有插件的 requirements.txt 并安装到 venv
-          echo "扫描插件依赖..."
-          if [ -d "$CLONE_TEMP_DIR/data/plugins" ]; then
-            for plugin_dir in "$CLONE_TEMP_DIR/data/plugins"/*; do
-              if [ -d "$plugin_dir" ] && [ -f "$plugin_dir/requirements.txt" ]; then
-                echo "发现插件依赖: $plugin_dir/requirements.txt"
-                if [ -f "$HOME/.local/bin/uv" ]; then
-                  cd "$CLONE_TEMP_DIR"
-                  echo "安装插件依赖: $(basename "$plugin_dir")..."
-                  $HOME/.local/bin/uv pip install -r "$plugin_dir/requirements.txt" 2>/dev/null || echo "警告: 插件依赖安装失败，将在启动时重试"
-                fi
-              fi
-            done
-          fi
+          REINSTALL_PLUGINS_FLAG=1  # 备份恢复成功，需要重装插件依赖
+
         else
           echo "备份恢复失败，使用默认配置"
           cp cmd_config.json "$CLONE_TEMP_DIR/data"
@@ -308,10 +316,54 @@ install_astrbot(){
     # 原子性重命名
     mv "$CLONE_TEMP_DIR" "$INSTALL_DIR"
     
+    # 使用 uv sync 同步依赖
+    echo "同步 AstrBot 依赖..."
+    if ! $HOME/.local/bin/uv sync; then
+      echo "依赖同步失败"
+      exit 1
+    fi
+  
   else
     progress_echo "AstrBot $L_INSTALLED"
   fi
-  
+
+  if [ ! -d "$INSTALL_DIR/.venv" ]; then
+    cd "$INSTALL_DIR"
+
+    # 使用 uv sync 同步依赖
+    echo "同步 AstrBot 依赖..."
+    if ! $HOME/.local/bin/uv sync; then
+      echo "依赖同步失败"
+      exit 1
+    fi
+
+    REINSTALL_PLUGINS_FLAG=1  # .venv 不存在，需要重装插件依赖
+  fi
+
+  # 检查是否需要重装插件依赖（根据标记）
+  if [ "$REINSTALL_PLUGINS_FLAG" -eq 1 ]; then
+    cd "$INSTALL_DIR"
+
+    echo "检测到重装插件依赖标记，开始重装..."
+    # 清除标记（将脚本中的标记重置为0）
+    sed -i 's/^REINSTALL_PLUGINS_FLAG=1$/REINSTALL_PLUGINS_FLAG=0/' /root/astrbot-startup.sh
+
+    # 扫描所有插件的 requirements.txt 并安装到 venv
+    echo "扫描插件依赖..."
+    if [ -d "$INSTALL_DIR/data/plugins" ]; then
+      for plugin_dir in "$INSTALL_DIR/data/plugins"/*; do
+        if [ -d "$plugin_dir" ] && [ -f "$plugin_dir/requirements.txt" ]; then
+          echo "发现插件依赖: $plugin_dir/requirements.txt"
+          if [ -f "$HOME/.local/bin/uv" ]; then
+            cd "$INSTALL_DIR"
+            echo "安装插件依赖: $(basename "$plugin_dir")..."
+            $HOME/.local/bin/uv pip install -r "$plugin_dir/requirements.txt" 2>/dev/null || echo "警告: 插件依赖安装失败，将在启动时重试"
+          fi
+        fi
+      done
+    fi
+  fi
+
   # 启动 AstrBot（失败直接退出）
   progress_echo "AstrBot 配置中"
   cd $INSTALL_DIR
@@ -319,31 +371,14 @@ install_astrbot(){
     echo "uv 未找到"
     exit 1
   fi
-  
-  # 使用 uv sync 同步依赖
-  echo "同步 AstrBot 依赖..."
-  if ! $HOME/.local/bin/uv sync; then
-    echo "依赖同步失败"
+
+  # 使用 uv run --no-sync main.py 启动（跳过依赖同步）
+    echo "启动 AstrBot..."
+  if ! $HOME/.local/bin/uv run --no-sync main.py; then
+    echo "AstrBot 启动失败"
     exit 1
   fi
-  
-  # 首次启动使用 uv run main.py（会自动同步依赖）
-  # 非首次启动使用 uv run --no-sync main.py（跳过依赖同步）
-  if [ ! -f "$INSTALL_DIR/.uv_synced" ]; then
-    echo "首次启动 AstrBot..."
-    if ! $HOME/.local/bin/uv run main.py; then
-      echo "AstrBot 启动失败"
-      exit 1
-    fi
-    # 标记已同步
-    touch "$INSTALL_DIR/.uv_synced"
-  else
-    echo "非首次启动 AstrBot，跳过依赖同步..."
-    if ! $HOME/.local/bin/uv run --no-sync main.py; then
-      echo "AstrBot 启动失败"
-      exit 1
-    fi
-  fi
+
 }
 
 install_sudo_curl_git
