@@ -4,6 +4,7 @@ import 'package:get/get.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 import 'package:webview_flutter_android/webview_flutter_android.dart';
 import 'package:xterm/xterm.dart';
+import 'package:file_picker/file_picker.dart';
 import '../../controllers/terminal_controller.dart';
 import '../settings/settings_page.dart';
 import '../terminal/terminal_theme.dart';
@@ -94,6 +95,8 @@ class _WebViewPageState extends State<WebViewPage> {
       // 允许访问本地文件和内容
       androidController.setAllowFileAccess(true);
       androidController.setAllowContentAccess(true);
+      // 设置文件选择回调
+      androidController.setOnShowFileSelector(_handleFileSelection);
     }
 
     _astrBotController.addJavaScriptChannel(
@@ -104,7 +107,7 @@ class _WebViewPageState extends State<WebViewPage> {
         }
       },
     );
-    
+
     setState(() {
       _astrBotInitialized = true;
     });
@@ -148,6 +151,8 @@ class _WebViewPageState extends State<WebViewPage> {
       // 允许访问本地文件和内容
       androidController.setAllowFileAccess(true);
       androidController.setAllowContentAccess(true);
+      // 设置文件选择回调
+      androidController.setOnShowFileSelector(_handleFileSelection);
     }
   }
 
@@ -172,6 +177,8 @@ class _WebViewPageState extends State<WebViewPage> {
       androidController.setMixedContentMode(MixedContentMode.compatibilityMode);
       androidController.setAllowFileAccess(true);
       androidController.setAllowContentAccess(true);
+      // 设置文件选择回调
+      androidController.setOnShowFileSelector(_handleFileSelection);
     }
 
     return controller;
@@ -187,6 +194,103 @@ class _WebViewPageState extends State<WebViewPage> {
     // 创建新控制器
     _customControllers[url] = _createCustomController(url);
     return _customControllers[url]!;
+  }
+
+  // 处理文件选择
+  Future<List<String>> _handleFileSelection(FileSelectorParams params) async {
+    try {
+      // 根据参数配置文件选择器
+      FilePickerResult? result;
+
+      // 判断是否接受多个文件
+      final bool allowMultiple = params.mode == FileSelectorMode.openMultiple;
+
+      // 判断文件类型
+      if (params.acceptTypes.isNotEmpty) {
+        // 如果指定了接受的文件类型
+        final acceptTypes = params.acceptTypes;
+
+        // 检查是否只接受图片
+        final bool isImageOnly = acceptTypes.every((type) =>
+          type.startsWith('image/') ||
+          ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', '.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp'].contains(type.toLowerCase())
+        );
+
+        // 检查是否只接受视频
+        final bool isVideoOnly = acceptTypes.every((type) =>
+          type.startsWith('video/') ||
+          ['mp4', 'avi', 'mov', 'mkv', 'flv', 'wmv', '.mp4', '.avi', '.mov', '.mkv', '.flv', '.wmv'].contains(type.toLowerCase())
+        );
+
+        // 检查是否只接受音频
+        final bool isAudioOnly = acceptTypes.every((type) =>
+          type.startsWith('audio/') ||
+          ['mp3', 'wav', 'ogg', 'flac', 'm4a', 'aac', '.mp3', '.wav', '.ogg', '.flac', '.m4a', '.aac'].contains(type.toLowerCase())
+        );
+
+        if (isImageOnly) {
+          result = await FilePicker.platform.pickFiles(
+            type: FileType.image,
+            allowMultiple: allowMultiple,
+          );
+        } else if (isVideoOnly) {
+          result = await FilePicker.platform.pickFiles(
+            type: FileType.video,
+            allowMultiple: allowMultiple,
+          );
+        } else if (isAudioOnly) {
+          result = await FilePicker.platform.pickFiles(
+            type: FileType.audio,
+            allowMultiple: allowMultiple,
+          );
+        } else {
+          // 提取所有允许的扩展名
+          final List<String> allowedExtensions = [];
+          for (final type in acceptTypes) {
+            // 如果是扩展名格式 (如 .txt, .pdf)
+            if (type.startsWith('.')) {
+              allowedExtensions.add(type.substring(1));
+            }
+            // 如果是文件扩展名格式 (如 txt, pdf)
+            else if (!type.contains('/')) {
+              allowedExtensions.add(type);
+            }
+          }
+
+          if (allowedExtensions.isNotEmpty) {
+            result = await FilePicker.platform.pickFiles(
+              type: FileType.custom,
+              allowedExtensions: allowedExtensions,
+              allowMultiple: allowMultiple,
+            );
+          } else {
+            result = await FilePicker.platform.pickFiles(
+              type: FileType.any,
+              allowMultiple: allowMultiple,
+            );
+          }
+        }
+      } else {
+        // 没有指定类型，允许选择任何文件
+        result = await FilePicker.platform.pickFiles(
+          type: FileType.any,
+          allowMultiple: allowMultiple,
+        );
+      }
+
+      // 返回选中的文件路径
+      if (result != null && result.files.isNotEmpty) {
+        return result.files
+            .where((file) => file.path != null)
+            .map((file) => file.path!)
+            .toList();
+      }
+
+      return [];
+    } catch (e) {
+      debugPrint('File selection error: $e');
+      return [];
+    }
   }
 
   void _injectClipboardScript(WebViewController controller) {

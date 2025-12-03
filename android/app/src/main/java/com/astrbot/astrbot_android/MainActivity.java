@@ -1,11 +1,16 @@
 package com.astrbot.astrbot_android;
 
+import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
+import android.net.Uri;
 import android.os.Bundle;
 import android.view.ViewGroup;
+import android.webkit.ValueCallback;
+import android.webkit.WebChromeClient;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.fragment.app.FragmentActivity;
 import androidx.fragment.app.FragmentManager;
 
@@ -22,12 +27,16 @@ public class MainActivity extends FragmentActivity {
     Context mContext;
     FragmentManager fragmentManager = getSupportFragmentManager();
 
+    // 文件选择器相关
+    private static final int FILE_CHOOSER_REQUEST_CODE = 1;
+    private ValueCallback<Uri[]> filePathCallback;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         mContext = this;
         setContentView(com.astrbot.astrbot_android.R.layout.my_activity_layout);
-        
+
         flutterFragment = (FlutterFragment) fragmentManager.findFragmentByTag(TAG_FLUTTER_FRAGMENT);
         FlutterEngine flutterEngine = new FlutterEngine(this, null, false);
         flutterEngine.getDartExecutor().executeDartEntrypoint(DartExecutor.DartEntrypoint.createDefault());
@@ -60,6 +69,52 @@ public class MainActivity extends FragmentActivity {
     protected void onNewIntent(@NonNull Intent intent) {
         super.onNewIntent(intent);
         flutterFragment.onNewIntent(intent);
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+
+        // 处理文件选择器返回的结果
+        if (requestCode == FILE_CHOOSER_REQUEST_CODE) {
+            if (filePathCallback == null) {
+                return;
+            }
+
+            Uri[] results = null;
+            if (resultCode == Activity.RESULT_OK && data != null) {
+                String dataString = data.getDataString();
+                if (dataString != null) {
+                    results = new Uri[]{Uri.parse(dataString)};
+                } else if (data.getClipData() != null) {
+                    // 处理多文件选择
+                    int count = data.getClipData().getItemCount();
+                    results = new Uri[count];
+                    for (int i = 0; i < count; i++) {
+                        results[i] = data.getClipData().getItemAt(i).getUri();
+                    }
+                }
+            }
+
+            filePathCallback.onReceiveValue(results);
+            filePathCallback = null;
+        }
+
+        // 传递给 FlutterFragment
+        flutterFragment.onActivityResult(requestCode, resultCode, data);
+    }
+
+    // 用于从 Flutter 端调用的方法，触发文件选择器
+    public void openFileChooser(ValueCallback<Uri[]> callback) {
+        filePathCallback = callback;
+
+        Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
+        intent.addCategory(Intent.CATEGORY_OPENABLE);
+        intent.setType("*/*");
+        intent.putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true);
+
+        Intent chooserIntent = Intent.createChooser(intent, "选择文件");
+        startActivityForResult(chooserIntent, FILE_CHOOSER_REQUEST_CODE);
     }
 
     @Override

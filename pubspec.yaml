@@ -27,6 +27,7 @@ dependencies:
   permission_handler: ^11.3.1
   http: ^1.2.2
   url_launcher: ^6.3.1
+  file_picker: ^8.1.6
 
   # get repo
   xterm:
