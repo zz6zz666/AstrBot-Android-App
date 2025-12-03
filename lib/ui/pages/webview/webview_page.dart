@@ -377,12 +377,25 @@ class _WebViewPageState extends State<WebViewPage> {
         );
       }
 
-      // 返回选中的文件路径
+      // 返回选中的文件路径,转换为 file:// URI 格式
       if (result != null && result.files.isNotEmpty) {
-        return result.files
+        final List<String> filePaths = result.files
             .where((file) => file.path != null)
-            .map((file) => file.path!)
+            .map((file) {
+              final path = file.path!;
+              // 如果路径已经是 file:// 开头,直接返回
+              if (path.startsWith('file://')) {
+                return path;
+              }
+              // 否则转换为 file:// URI
+              // 在 Windows 上路径可能包含反斜杠,需要替换为正斜杠
+              final normalizedPath = path.replaceAll('\\', '/');
+              return 'file://$normalizedPath';
+            })
             .toList();
+
+        debugPrint('Selected files: $filePaths');
+        return filePaths;
       }
 
       return [];
