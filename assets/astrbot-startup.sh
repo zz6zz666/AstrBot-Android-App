@@ -238,7 +238,6 @@ install_astrbot(){
   if [ ! -d "$INSTALL_DIR" ]; then
     cd $HOME
     progress_echo "AstrBot $L_NOT_INSTALLED，$L_INSTALLING..."
-    network_test
 
     # 克隆仓库（失败直接退出）
     echo "正在获取 AstrBot 最新版本..."
@@ -260,6 +259,8 @@ install_astrbot(){
         exit 1
       fi
     else
+      network_test
+      
       # 使用默认逻辑：获取最新的 tag
       LATEST_TAG=$(git ls-remote --tags --sort='-v:refname' ${target_proxy:+${target_proxy}/}https://github.com/AstrBotDevs/AstrBot.git | head -n 1 | awk -F'/' '{print $3}')
 
