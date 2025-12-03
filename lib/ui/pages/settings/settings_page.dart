@@ -40,7 +40,7 @@ class _SettingsPageState extends State<SettingsPage> {
   Future<void> _loadAppVersion() async {
     final packageInfo = await PackageInfo.fromPlatform();
     setState(() {
-      _appVersion = '${packageInfo.version}+${packageInfo.buildNumber}';
+      _appVersion = packageInfo.version;
     });
   }
 
@@ -59,8 +59,12 @@ class _SettingsPageState extends State<SettingsPage> {
 
       // 使用镜像源获取最新版本信息
       final mirrors = [
+        'https://ghfast.top/https://api.github.com/repos/zz6zz666/AstrBot-Android-App/releases/latest',
         'https://gh-proxy.com/https://api.github.com/repos/zz6zz666/AstrBot-Android-App/releases/latest',
         'https://mirror.ghproxy.com/https://api.github.com/repos/zz6zz666/AstrBot-Android-App/releases/latest',
+        'https://raw.gitmirror.com/https://api.github.com/repos/zz6zz666/AstrBot-Android-App/releases/latest',
+        'https://hub.gitmirror.com/https://api.github.com/repos/zz6zz666/AstrBot-Android-App/releases/latest',
+        'https://github.moeyy.xyz/https://api.github.com/repos/zz6zz666/AstrBot-Android-App/releases/latest',
         'https://api.github.com/repos/zz6zz666/AstrBot-Android-App/releases/latest',
       ];
 
@@ -204,31 +208,63 @@ class _SettingsPageState extends State<SettingsPage> {
       return;
     }
 
+    // 移除检查更新时使用的镜像源前缀，恢复为原始 GitHub URL
+    // 可能的格式:
+    // - https://gh-proxy.com/https://github.com/...
+    // - https://mirror.ghproxy.com/https://github.com/...
+    // - https://github.com/... (已经是原始链接)
+    String cleanUrl = downloadUrl;
+    final mirrorPrefixes = [
+      'https://gh-proxy.com/',
+      'https://mirror.ghproxy.com/',
+      'https://raw.gitmirror.com/',
+      'https://hub.gitmirror.com/',
+      'https://github.moeyy.xyz/',
+      'https://ghfast.top/',
+    ];
+
+    for (final prefix in mirrorPrefixes) {
+      if (cleanUrl.startsWith(prefix)) {
+        cleanUrl = cleanUrl.substring(prefix.length);
+        break;
+      }
+    }
+
     final sources = [
       {
         'name': 'Ghfast镜像下载',
         'icon': Icons.speed,
-        'url': 'https://ghfast.top/$downloadUrl',
+        'url': 'https://ghfast.top/$cleanUrl',
       },
       {
-        'name': 'Gitmirror镜像下载',
+        'name': 'GHProxy镜像下载',
         'icon': Icons.speed,
-        'url': 'https://raw.gitmirror.com/$downloadUrl',
+        'url': 'https://gh-proxy.com/$cleanUrl',
+      },
+      {
+        'name': 'Mirror GHProxy镜像下载',
+        'icon': Icons.speed,
+        'url': 'https://mirror.ghproxy.com/$cleanUrl',
+      },
+      {
+        'name': 'Hub Gitmirror镜像下载',
+        'icon': Icons.speed,
+        'url': 'https://hub.gitmirror.com/$cleanUrl',
       },
       {
         'name': 'Moeyy镜像下载',
         'icon': Icons.speed,
-        'url': 'https://github.moeyy.xyz/$downloadUrl',
+        'url': 'https://github.moeyy.xyz/$cleanUrl',
       },
       {
-        'name': 'Workers镜像下载',
+        'name': 'Raw Gitmirror镜像下载',
         'icon': Icons.speed,
-        'url': 'https://gh-proxy.com/$downloadUrl',
+        'url': 'https://raw.gitmirror.com/$cleanUrl',
       },
       {
         'name': 'GitHub原始链接',
         'icon': Icons.cloud_download,
-        'url': downloadUrl,
+        'url': cleanUrl,
         'description': '直接从GitHub官方服务器下载，速度可能较慢',
       },
     ];
@@ -1051,27 +1087,6 @@ class _SettingsPageState extends State<SettingsPage> {
           },
         ),
         ListTile(
-          leading: const Icon(Icons.home),
-          title: const Text('回到 AstrBot 主页'),
-          subtitle: const Text('重置并刷新 AstrBot 页面'),
-          onTap: () {
-            // 重置 AstrBot WebView URL 并刷新
-            widget.astrBotController.loadRequest(
-              Uri.parse('http://127.0.0.1:6185'),
-            );
-
-            // 跳转到 AstrBot 标签页（索引 0）
-            widget.onNavigate(0);
-
-            Get.snackbar(
-              '已跳转',
-              'AstrBot 页面已重置并刷新',
-              snackPosition: SnackPosition.BOTTOM,
-              duration: const Duration(seconds: 2),
-            );
-          },
-        ),
-        ListTile(
           leading: const Icon(Icons.refresh),
           title: const Text('重置 Python 环境'),
           subtitle: const Text('删除虚拟环境并重启应用，启动时将自动重建'),
@@ -1358,6 +1373,51 @@ class _SettingsPageState extends State<SettingsPage> {
                   colorText: Colors.white,
                 );
               }
+            }
+          },
+        ),
+        const Divider(),
+        ListTile(
+          leading: const Icon(Icons.exit_to_app, color: Colors.red),
+          title: const Text(
+            '退出应用',
+            style: TextStyle(color: Colors.red),
+          ),
+          subtitle: const Text('退出 AstrBot 应用'),
+          onTap: () async {
+            // 显示确认对话框
+            final confirm = await Get.dialog<bool>(
+              AlertDialog(
+                title: const Text('确认退出'),
+                content: const Text('确定要退出应用吗？'),
+                actions: [
+                  TextButton(
+                    onPressed: () => Get.back(result: false),
+                    child: const Text('取消'),
+                  ),
+                  TextButton(
+                    onPressed: () => Get.back(result: true),
+                    child: const Text(
+                      '退出',
+                      style: TextStyle(color: Colors.red),
+                    ),
+                  ),
+                ],
+              ),
+            );
+
+            if (confirm == true) {
+              Get.snackbar(
+                '退出应用',
+                '应用即将退出',
+                snackPosition: SnackPosition.BOTTOM,
+                duration: const Duration(seconds: 2),
+              );
+
+              // 2秒后自动退出应用
+              Future.delayed(const Duration(seconds: 2), () {
+                exit(0);
+              });
             }
           },
         ),
