@@ -21,7 +21,6 @@ class _WebViewPageState extends State<WebViewPage> {
   late final WebViewController _astrBotController;
   late final WebViewController _napCatController;
   final Map<String, WebViewController> _customControllers = {}; // 存储自定义 WebView 控制器，使用 URL 作为 key
-  DateTime? _lastBackPressed;
 
   final HomeController homeController = Get.find<HomeController>();
 
@@ -214,71 +213,6 @@ class _WebViewPageState extends State<WebViewPage> {
     controller.runJavaScript('window.clipboardText = "$text";');
   }
 
-  Future<void> _handleBackPress() async {
-    // 检查 NapCat WebUI 是否启用
-    final bool napCatEnabled = homeController.napCatWebUiEnabledRx.value;
-    final customWebViews = homeController.customWebViews;
-
-    // 计算终端页索引
-    int customStartIndex = napCatEnabled ? 2 : 1;
-    int terminalIndex = customStartIndex + customWebViews.length;
-
-    // 如果在终端页，不允许WebView回退，直接执行双击退出逻辑
-    if (_currentIndex == terminalIndex) {
-      // 执行双击退出逻辑（跳过WebView回退检查）
-    }
-    // 如果当前是 AstrBot 页面且 WebView 可回退，则回退
-    else if (_currentIndex == 0 && await _astrBotController.canGoBack()) {
-      await _astrBotController.goBack();
-      return;
-    }
-    // 如果当前是 NapCat 页面且 WebView 可回退，则回退
-    else if (napCatEnabled && _currentIndex == 1 && await _napCatController.canGoBack()) {
-      await _napCatController.goBack();
-      return;
-    }
-    // 检查是否是自定义 WebView 页面
-    else if (_currentIndex >= customStartIndex && _currentIndex < terminalIndex) {
-      int customIndex = _currentIndex - customStartIndex;
-      if (customIndex < customWebViews.length) {
-        final url = customWebViews[customIndex]['url'] ?? '';
-        if (_customControllers.containsKey(url)) {
-          final controller = _customControllers[url]!;
-          if (await controller.canGoBack()) {
-            await controller.goBack();
-            return;
-          }
-        }
-      }
-    }
-
-    // 否则执行双击退出逻辑
-    final now = DateTime.now();
-    final backButtonInterval = _lastBackPressed == null
-        ? const Duration(seconds: 3)
-        : now.difference(_lastBackPressed!);
-
-    if (backButtonInterval > const Duration(seconds: 2)) {
-      _lastBackPressed = now;
-      Get.showSnackbar(
-        const GetSnackBar(
-          message: '再按一次退出',
-          duration: Duration(seconds: 2),
-          snackPosition: SnackPosition.BOTTOM,
-          margin: EdgeInsets.all(10),
-          borderRadius: 10,
-          backgroundColor: Colors.black87,
-          messageText: Text('再按一次退出', style: TextStyle(color: Colors.white)),
-        ),
-      );
-    } else {
-      _lastBackPressed = null;
-      if (mounted) {
-        Navigator.of(context).pop();
-      }
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     if (!_astrBotInitialized) {
@@ -317,56 +251,49 @@ class _WebViewPageState extends State<WebViewPage> {
           ? settingsIndex
           : _currentIndex;
 
-      return PopScope(
-        canPop: false,
-        onPopInvokedWithResult: (didPop, result) async {
-          if (didPop) return;
-          await _handleBackPress();
-        },
-        child: AnnotatedRegion<SystemUiOverlayStyle>(
-          value: const SystemUiOverlayStyle(
-            statusBarColor: Colors.white,
-            statusBarIconBrightness: Brightness.dark,
-            statusBarBrightness: Brightness.light,
+      return AnnotatedRegion<SystemUiOverlayStyle>(
+        value: const SystemUiOverlayStyle(
+          statusBarColor: Colors.white,
+          statusBarIconBrightness: Brightness.dark,
+          statusBarBrightness: Brightness.light,
+        ),
+        child: Scaffold(
+          backgroundColor: Colors.white,
+          body: SafeArea(
+            top: true,
+            child: IndexedStack(
+              index: validCurrentIndex,
+              children: [
+                ...pages,
+
+                // 4. 终端页面
+                TerminalView(
+                  homeController.terminal,
+                  readOnly: false,
+                  backgroundOpacity: 1,
+                  theme: ManjaroTerminalTheme(),
+                ),
+
+                // 5. 软件设置页面
+                SettingsPage(
+                  astrBotController: _astrBotController,
+                  napCatController: _napCatController,
+                  onNavigate: (index) {
+                    setState(() {
+                      _currentIndex = index;
+                    });
+                  },
+                ),
+              ],
+            ),
           ),
-          child: Scaffold(
-            backgroundColor: Colors.white,
-            body: SafeArea(
-              top: true,
-              child: IndexedStack(
-                index: validCurrentIndex,
-                children: [
-                  ...pages,
-
-                  // 4. 终端页面
-                  TerminalView(
-                    homeController.terminal,
-                    readOnly: false,
-                    backgroundOpacity: 1,
-                    theme: ManjaroTerminalTheme(),
-                  ),
-
-                  // 5. 软件设置页面
-                  SettingsPage(
-                    astrBotController: _astrBotController,
-                    napCatController: _napCatController,
-                    onNavigate: (index) {
-                      setState(() {
-                        _currentIndex = index;
-                      });
-                    },
-                  ),
-                ],
-              ),
-            ),
-            bottomNavigationBar: WebViewBottomNavBar(
-              currentIndex: validCurrentIndex,
-              onTap: (index) {
-                setState(() {
-                  _currentIndex = index;
-                });
-              },
-            ),
+          bottomNavigationBar: WebViewBottomNavBar(
+            currentIndex: validCurrentIndex,
+            onTap: (index) {
+              setState(() {
+                _currentIndex = index;
+              });
+            },
           ),
         ),
       );

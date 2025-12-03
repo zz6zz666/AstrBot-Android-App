@@ -184,3 +184,6 @@ public
 key.properties
 
 .fvm
+
+/.trae/
+/.claude/

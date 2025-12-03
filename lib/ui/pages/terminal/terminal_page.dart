@@ -4,7 +4,6 @@ import 'package:get/get.dart';
 import 'package:global_repository/global_repository.dart';
 import 'package:xterm/xterm.dart';
 
-import '../../../core/utils/file_utils.dart';
 import '../../controllers/terminal_controller.dart';
 import 'terminal_theme.dart';
 
@@ -43,24 +42,18 @@ class _TerminalPageState extends State<TerminalPage> {
     return Scaffold(
       backgroundColor: visible ? terminalTheme.background : Theme.of(context).colorScheme.surface,
       body: SafeArea(
-        child: PopScope(
-          onPopInvokedWithResult: (didPop, result) {
-            controller.pseudoTerminal!.writeString('\x03');
-            Get.back();
+        child: GestureDetector(
+          onTap: () {
+            visible = !visible;
+            setState(() {});
           },
-          canPop: true,
-          child: GestureDetector(
-            onTap: () {
-              visible = !visible;
-              setState(() {});
-            },
-            behavior: HitTestBehavior.translucent,
-            child: Stack(
-              alignment: Alignment.center,
-              children: [
-                Padding(
-                  padding: EdgeInsets.all(8.w),
-                  child: Visibility(
+          behavior: HitTestBehavior.translucent,
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              Padding(
+                padding: EdgeInsets.all(8.w),
+                child: Visibility(
                   visible: visible,
                   // IgnorePointer
                   child: AbsorbPointer(
@@ -141,6 +134,6 @@ class _TerminalPageState extends State<TerminalPage> {
           ),
         ),
       ),
-    ));
+    );
   }
 }

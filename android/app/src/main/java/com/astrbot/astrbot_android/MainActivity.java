@@ -64,8 +64,8 @@ public class MainActivity extends FragmentActivity {
 
     @Override
     public void onBackPressed() {
-        super.onBackPressed();
-        flutterFragment.onBackPressed();
+        // 禁用所有返回操作，不执行任何动作
+        // Disable all back button operations
     }
 
     @Override
