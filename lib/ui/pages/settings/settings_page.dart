@@ -347,7 +347,7 @@ class _SettingsPageState extends State<SettingsPage> {
               decoration: const InputDecoration(
                 labelText: 'URL',
                 hintText: '例如：6099/webui?token=***',
-                helperText: '自动添加前缀 http://127.0.0.1: 若需使用https,请手动输入完整URL',
+                helperText: '自动添加前缀 http://127.0.0.1: \n若需使用https,请手动输入完整URL',
                 border: OutlineInputBorder(),
               ),
               keyboardType: TextInputType.url,
@@ -792,7 +792,7 @@ class _SettingsPageState extends State<SettingsPage> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const Text(
-                '自定义克隆命令，以使用 fork 的 AstrBot 仓库。目标目录固定为 AstrBot，不可自定义。\n留空则使用默认逻辑（从镜像源获取官方最新 tag）。',
+                '自定义克隆命令，以使用 fork 的 AstrBot 仓库；目标目录固定为 AstrBot，不可自定义。\n留空则使用默认逻辑（从镜像源获取官方最新 tag）。',
                 style: TextStyle(fontSize: 12, color: Colors.grey),
               ),
               const SizedBox(height: 8),
