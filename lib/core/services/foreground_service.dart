@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter_foreground_task/flutter_foreground_task.dart';
 
 /// 前台服务管理类
@@ -13,6 +14,7 @@ class ForegroundServiceManager {
         channelDescription: '保持AstrBot在后台运行',
         channelImportance: NotificationChannelImportance.MIN,
         priority: NotificationPriority.MIN,
+        visibility: NotificationVisibility.VISIBILITY_PUBLIC,
       ),
       iosNotificationOptions: const IOSNotificationOptions(
         showNotification: false,
@@ -36,6 +38,13 @@ class ForegroundServiceManager {
         serviceId: 1001,
         notificationTitle: 'AstrBot正在运行',
         notificationText: '应用正在后台保持运行状态',
+        notificationIcon: null,
+        notificationButtons: [
+          const NotificationButton(
+            id: 'btn_stop',
+            text: '停止运行',
+          ),
+        ],
         callback: startCallback,
       );
     }
@@ -63,6 +72,12 @@ class ForegroundServiceManager {
       FlutterForegroundTask.updateService(
         notificationTitle: title ?? 'AstrBot正在运行',
         notificationText: text ?? '应用正在后台保持运行状态',
+        notificationButtons: [
+          const NotificationButton(
+            id: 'btn_stop',
+            text: '停止运行',
+          ),
+        ],
       );
     }
   }
@@ -92,11 +107,21 @@ class KeepAliveTaskHandler extends TaskHandler {
   @override
   Future<void> onDestroy(DateTime timestamp, bool isTaskRemoved) async {
     // 服务销毁时调用
+    // 如果不是用户手动移除任务（从最近任务列表中滑走），则立即重启服务
+    if (!isTaskRemoved) {
+      // 延迟重启以确保服务完全关闭
+      await Future.delayed(const Duration(milliseconds: 500));
+      await ForegroundServiceManager.startService();
+    }
   }
 
   @override
   void onNotificationButtonPressed(String id) {
-    // 通知按钮点击时调用（当前没有按钮）
+    // 通知按钮点击时调用
+    if (id == 'btn_stop') {
+      // 用户点击停止运行按钮，退出应用
+      exit(0);
+    }
   }
 
   @override
