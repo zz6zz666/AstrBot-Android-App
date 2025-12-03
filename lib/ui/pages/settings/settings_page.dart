@@ -501,7 +501,7 @@ class _SettingsPageState extends State<SettingsPage> {
   }
 
   // 执行备份操作
-  Future<bool> _performBackup() async {
+  Future<bool> _performBackup({bool showLoadingDialog = false}) async {
     try {
       // 检查并请求存储权限
       var status = await Permission.manageExternalStorage.status;
@@ -525,6 +525,14 @@ class _SettingsPageState extends State<SettingsPage> {
             }
           }
         }
+      }
+
+      // 权限获取成功后，如果需要显示加载对话框
+      if (showLoadingDialog) {
+        Get.dialog(
+          const Center(child: CircularProgressIndicator()),
+          barrierDismissible: false,
+        );
       }
 
       // 获取当前时间戳
@@ -571,6 +579,10 @@ class _SettingsPageState extends State<SettingsPage> {
         final fileSize = await backupFile.length();
         final fileSizeMB = (fileSize / 1024 / 1024).toStringAsFixed(2);
 
+        if (showLoadingDialog) {
+          Get.back(); // 关闭加载对话框
+        }
+
         Get.snackbar(
           '备份成功',
           '备份文件: $backupFileName\n大小: ${fileSizeMB}MB',
@@ -580,6 +592,10 @@ class _SettingsPageState extends State<SettingsPage> {
         Log.i('备份成功: $backupPath (${fileSizeMB}MB)', tag: 'AstrBot');
         return true;
       } else {
+        if (showLoadingDialog) {
+          Get.back(); // 关闭加载对话框
+        }
+
         Get.snackbar(
           '备份失败',
           '错误: ${result.stderr}',
@@ -591,6 +607,10 @@ class _SettingsPageState extends State<SettingsPage> {
         return false;
       }
     } catch (e) {
+      if (showLoadingDialog) {
+        Get.back(); // 关闭加载对话框
+      }
+
       Get.snackbar(
         '备份失败',
         e.toString(),
@@ -659,7 +679,7 @@ class _SettingsPageState extends State<SettingsPage> {
 
     final result = await Get.dialog<bool>(
       AlertDialog(
-        title: const Text('快速登录QQ'),
+        title: const Text('快速登录 QQ'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -772,7 +792,7 @@ class _SettingsPageState extends State<SettingsPage> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const Text(
-                '自定义 AstrBot 的 Git Clone 命令，留空则使用默认逻辑（从镜像源获取最新 tag）。',
+                '自定义克隆命令，以使用 fork 的 AstrBot 仓库。目标目录固定为 AstrBot，不可自定义。\n留空则使用默认逻辑（从镜像源获取官方最新 tag）。',
                 style: TextStyle(fontSize: 12, color: Colors.grey),
               ),
               const SizedBox(height: 8),
@@ -859,7 +879,7 @@ class _SettingsPageState extends State<SettingsPage> {
           leading: const Icon(Icons.info_outline),
           title: const Text('软件版本'),
           subtitle: Text(
-            _appVersion.isEmpty ? '加载中...' : _appVersion,
+            _appVersion.isEmpty ? '加载中...' : '$_appVersion（点击检查更新）',
           ),
           onTap: () => _checkForUpdates(),
         ),
@@ -923,17 +943,8 @@ class _SettingsPageState extends State<SettingsPage> {
 
             // 如果选择备份，先执行备份
             if (backupChoice == 'backup') {
-              Get.dialog(
-                const Center(child: CircularProgressIndicator()),
-                barrierDismissible: false,
-              );
-
-              bool backupSuccess = false;
-              try {
-                backupSuccess = await _performBackup();
-              } finally {
-                Get.back(); // 关闭加载提示
-              }
+              bool backupSuccess =
+                  await _performBackup(showLoadingDialog: true);
 
               if (!backupSuccess) {
                 // 备份失败，询问是否继续
@@ -1204,21 +1215,12 @@ class _SettingsPageState extends State<SettingsPage> {
           title: const Text('备份 AstrBot 数据'),
           subtitle: const Text('备份 AstrBot 配置和数据到手机存储'),
           onTap: () async {
-            Get.dialog(
-              const Center(child: CircularProgressIndicator()),
-              barrierDismissible: false,
-            );
-
-            try {
-              await _performBackup();
-            } finally {
-              Get.back(); // 关闭加载提示
-            }
+            await _performBackup(showLoadingDialog: true);
           },
         ),
         ListTile(
           leading: const Icon(Icons.login),
-          title: const Text('快速登录QQ'),
+          title: const Text('快速登录 QQ'),
           subtitle: const Text('配置自动登录的QQ账号'),
           onTap: () => _showQuickLoginDialog(),
         ),
@@ -1251,7 +1253,7 @@ class _SettingsPageState extends State<SettingsPage> {
               padding: EdgeInsets.all(16.0),
               child: Center(
                 child: Text(
-                  '暂无自定义 WebView\n点击右上角"+"添加',
+                  '用于添加插件WebUI地址\n点击右上角"+"添加',
                   style: TextStyle(color: Colors.grey),
                   textAlign: TextAlign.center,
                 ),
@@ -1326,7 +1328,7 @@ class _SettingsPageState extends State<SettingsPage> {
           final token = homeController.napCatWebUiToken.value;
           return ListTile(
             leading: const Icon(Icons.vpn_key),
-            title: const Text('NapCat登录token'),
+            title: const Text('NapCat 登录 token'),
             subtitle: Text(token.isEmpty ? '暂未获取到token' : token),
             onTap: token.isEmpty
                 ? null
