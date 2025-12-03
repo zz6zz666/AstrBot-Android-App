@@ -72,8 +72,6 @@ EOF
 
 String installUbuntu = r'''
 install_ubuntu(){
-  echo "==== install_ubuntu start ===="
-
   NEED_INSTALL=0
   if [ ! -d "$UBUNTU_PATH/bin" ]; then
     echo "[state] missing bin directory, force reinstall"
@@ -149,7 +147,6 @@ install_ubuntu(){
   fi
   change_ubuntu_source
   echo 'nameserver 8.8.8.8' > $UBUNTU_PATH/etc/resolv.conf
-  echo "==== install_ubuntu end ===="
 }
 ''';
 

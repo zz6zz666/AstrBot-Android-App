@@ -6,6 +6,8 @@ import 'package:get/get.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 import 'package:global_repository/global_repository.dart';
 import 'package:package_info_plus/package_info_plus.dart';
+import 'package:http/http.dart' as http;
+import 'package:url_launcher/url_launcher.dart';
 import '../../controllers/terminal_controller.dart';
 import '../../../core/constants/scripts.dart' as scripts;
 
@@ -40,6 +42,248 @@ class _SettingsPageState extends State<SettingsPage> {
     setState(() {
       _appVersion = '${packageInfo.version}+${packageInfo.buildNumber}';
     });
+  }
+
+  // 检查更新
+  Future<void> _checkForUpdates() async {
+    try {
+      // 显示加载提示
+      Get.dialog(
+        const Center(child: CircularProgressIndicator()),
+        barrierDismissible: false,
+      );
+
+      // 获取当前版本
+      final packageInfo = await PackageInfo.fromPlatform();
+      final currentVersion = packageInfo.version;
+
+      // 使用镜像源获取最新版本信息
+      final mirrors = [
+        'https://gh-proxy.com/https://api.github.com/repos/zz6zz666/AstrBot-Android-App/releases/latest',
+        'https://mirror.ghproxy.com/https://api.github.com/repos/zz6zz666/AstrBot-Android-App/releases/latest',
+        'https://api.github.com/repos/zz6zz666/AstrBot-Android-App/releases/latest',
+      ];
+
+      Map<String, dynamic>? releaseData;
+
+      for (final mirror in mirrors) {
+        try {
+          final response = await http.get(
+            Uri.parse(mirror),
+            headers: {'Accept': 'application/vnd.github.v3+json'},
+          ).timeout(const Duration(seconds: 10));
+
+          if (response.statusCode == 200) {
+            releaseData = jsonDecode(response.body) as Map<String, dynamic>;
+            break;
+          }
+        } catch (e) {
+          Log.w('镜像源 $mirror 请求失败: $e', tag: 'AstrBot');
+          continue;
+        }
+      }
+
+      Get.back(); // 关闭加载提示
+
+      if (releaseData == null) {
+        Get.snackbar(
+          '检查失败',
+          '无法连接到更新服务器',
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: Colors.orange,
+          colorText: Colors.white,
+        );
+        return;
+      }
+
+      // 解析最新版本号
+      final latestVersion =
+          (releaseData['tag_name'] as String?)?.replaceFirst('v', '') ?? '';
+      final releaseNotes = releaseData['body'] as String? ?? '暂无更新说明';
+
+      // 比较版本号
+      if (_compareVersions(latestVersion, currentVersion) > 0) {
+        // 有新版本，显示更新对话框
+        _showUpdateDialog(latestVersion, releaseNotes, releaseData);
+      } else {
+        Get.snackbar(
+          '已是最新版本',
+          '当前版本 $currentVersion 已是最新版本',
+          snackPosition: SnackPosition.BOTTOM,
+          duration: const Duration(seconds: 2),
+        );
+      }
+    } catch (e) {
+      Get.back(); // 关闭加载提示
+      Log.e('检查更新失败: $e', tag: 'AstrBot');
+      Get.snackbar(
+        '检查失败',
+        '检查更新时发生错误: $e',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+      );
+    }
+  }
+
+  // 版本号比较
+  int _compareVersions(String v1, String v2) {
+    final parts1 = v1.split('.').map((e) => int.tryParse(e) ?? 0).toList();
+    final parts2 = v2.split('.').map((e) => int.tryParse(e) ?? 0).toList();
+
+    for (int i = 0; i < 3; i++) {
+      final p1 = i < parts1.length ? parts1[i] : 0;
+      final p2 = i < parts2.length ? parts2[i] : 0;
+      if (p1 > p2) return 1;
+      if (p1 < p2) return -1;
+    }
+    return 0;
+  }
+
+  // 显示更新对话框
+  void _showUpdateDialog(
+      String version, String releaseNotes, Map<String, dynamic> releaseData) {
+    Get.dialog(
+      AlertDialog(
+        title: Text('发现新版本 $version'),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                '发行日志:',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+              ),
+              const SizedBox(height: 8),
+              Text(releaseNotes),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Get.back(),
+            child: const Text('关闭'),
+          ),
+          TextButton(
+            onPressed: () {
+              Get.back();
+              _showDownloadSourceDialog(releaseData);
+            },
+            child: const Text('去下载'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // 显示下载源选择对话框
+  void _showDownloadSourceDialog(Map<String, dynamic> releaseData) {
+    final assets = releaseData['assets'] as List?;
+    String? downloadUrl;
+
+    // 查找APK文件
+    if (assets != null) {
+      for (final asset in assets) {
+        final name = asset['name'] as String? ?? '';
+        if (name.endsWith('.apk')) {
+          downloadUrl = asset['browser_download_url'] as String?;
+          break;
+        }
+      }
+    }
+
+    if (downloadUrl == null) {
+      Get.snackbar(
+        '下载失败',
+        '未找到可下载的APK文件',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+      );
+      return;
+    }
+
+    final sources = [
+      {
+        'name': 'Ghfast镜像下载',
+        'icon': Icons.speed,
+        'url': 'https://ghfast.top/$downloadUrl',
+      },
+      {
+        'name': 'Gitmirror镜像下载',
+        'icon': Icons.speed,
+        'url': 'https://raw.gitmirror.com/$downloadUrl',
+      },
+      {
+        'name': 'Moeyy镜像下载',
+        'icon': Icons.speed,
+        'url': 'https://github.moeyy.xyz/$downloadUrl',
+      },
+      {
+        'name': 'Workers镜像下载',
+        'icon': Icons.speed,
+        'url': 'https://gh-proxy.com/$downloadUrl',
+      },
+      {
+        'name': 'GitHub原始链接',
+        'icon': Icons.cloud_download,
+        'url': downloadUrl,
+        'description': '直接从GitHub官方服务器下载，速度可能较慢',
+      },
+    ];
+
+    Get.dialog(
+      AlertDialog(
+        title: const Text('选择下载源'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              '请选择适合您网络环境的下载源',
+              style: TextStyle(fontSize: 14, color: Colors.grey),
+            ),
+            const SizedBox(height: 16),
+            ...sources.map((source) {
+              return ListTile(
+                leading: Icon(source['icon'] as IconData),
+                title: Text(source['name'] as String),
+                subtitle: source['description'] != null
+                    ? Text(
+                        source['description'] as String,
+                        style: const TextStyle(fontSize: 12),
+                      )
+                    : null,
+                onTap: () async {
+                  final url = source['url'] as String;
+                  final uri = Uri.parse(url);
+
+                  if (await canLaunchUrl(uri)) {
+                    await launchUrl(uri, mode: LaunchMode.externalApplication);
+                    Get.back();
+                  } else {
+                    Get.snackbar(
+                      '打开失败',
+                      '无法打开浏览器',
+                      snackPosition: SnackPosition.BOTTOM,
+                      backgroundColor: Colors.red,
+                      colorText: Colors.white,
+                    );
+                  }
+                },
+              );
+            }),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Get.back(),
+            child: const Text('取消'),
+          ),
+        ],
+      ),
+    );
   }
 
   // 显示添加自定义 WebView 对话框
@@ -579,9 +823,30 @@ class _SettingsPageState extends State<SettingsPage> {
           leading: const Icon(Icons.info_outline),
           title: const Text('软件版本'),
           subtitle: Text(
-            _appVersion.isEmpty ? '加载中...' : 'AstrBot Android v$_appVersion',
+            _appVersion.isEmpty ? '加载中...' : _appVersion,
           ),
-          onTap: () {},
+          onTap: () => _checkForUpdates(),
+        ),
+        ListTile(
+          leading: const Icon(Icons.home),
+          title: const Text('回到 AstrBot 主页'),
+          subtitle: const Text('重置并刷新 AstrBot 页面'),
+          onTap: () {
+            // 重置 AstrBot WebView URL 并刷新
+            widget.astrBotController.loadRequest(
+              Uri.parse('http://127.0.0.1:6185'),
+            );
+
+            // 跳转到 AstrBot 标签页（索引 0）
+            widget.onNavigate(0);
+
+            Get.snackbar(
+              '已跳转',
+              'AstrBot 页面已重置并刷新',
+              snackPosition: SnackPosition.BOTTOM,
+              duration: const Duration(seconds: 2),
+            );
+          },
         ),
         ListTile(
           leading: const Icon(Icons.restart_alt),
@@ -878,7 +1143,8 @@ class _SettingsPageState extends State<SettingsPage> {
           subtitle: const Text('下次启动时重新扫描并安装所有插件依赖'),
           onTap: () async {
             try {
-              final scriptPath = '${scripts.ubuntuPath}/root/astrbot-startup.sh';
+              final scriptPath =
+                  '${scripts.ubuntuPath}/root/astrbot-startup.sh';
               final scriptFile = File(scriptPath);
 
               if (await scriptFile.exists()) {
@@ -918,50 +1184,28 @@ class _SettingsPageState extends State<SettingsPage> {
             }
           },
         ),
-        Obx(() {
-          final token = homeController.napCatWebUiToken.value;
-          return ListTile(
-            leading: const Icon(Icons.vpn_key),
-            title: const Text('NapCat登录token'),
-            subtitle: Text(token.isEmpty ? '暂未获取到token' : token),
-            onTap: token.isEmpty
-                ? null
-                : () async {
-                    final fullUrl = 'http://localhost:6099/webui?token=$token';
-                    await Clipboard.setData(ClipboardData(text: fullUrl));
-                    Get.snackbar(
-                      '已复制',
-                      '完整登录链接已复制到剪贴板',
-                      snackPosition: SnackPosition.BOTTOM,
-                      duration: const Duration(seconds: 2),
-                    );
-                  },
-          );
-        }),
+        ListTile(
+          leading: const Icon(Icons.backup),
+          title: const Text('备份 AstrBot 数据'),
+          subtitle: const Text('备份 AstrBot 配置和数据到手机存储'),
+          onTap: () async {
+            Get.dialog(
+              const Center(child: CircularProgressIndicator()),
+              barrierDismissible: false,
+            );
+
+            try {
+              await _performBackup();
+            } finally {
+              Get.back(); // 关闭加载提示
+            }
+          },
+        ),
         ListTile(
           leading: const Icon(Icons.login),
           title: const Text('快速登录QQ'),
           subtitle: const Text('配置自动登录的QQ账号'),
           onTap: () => _showQuickLoginDialog(),
-        ),
-        ListTile(
-          leading: const Icon(Icons.web),
-          title: const Text('NapCat WebUI'),
-          subtitle: const Text('启用或禁用 NapCat 网页控制面板（默认关闭）'),
-          trailing: Switch(
-            value: homeController.napCatWebUiEnabled.get() ?? false,
-            onChanged: (bool value) {
-              // 使用新的方法来同步更新响应式变量
-              homeController.setNapCatWebUiEnabled(value);
-
-              Get.snackbar(
-                value ? 'WebUI 已启用' : 'WebUI 已禁用',
-                value ? 'NapCat 标签页已显示，可以立即访问控制面板' : 'NapCat 标签页已隐藏',
-                snackPosition: SnackPosition.BOTTOM,
-                duration: const Duration(seconds: 2),
-              );
-            },
-          ),
         ),
         const Divider(height: 1),
         Padding(
@@ -1045,27 +1289,49 @@ class _SettingsPageState extends State<SettingsPage> {
           ),
         ),
         ListTile(
+          leading: const Icon(Icons.web),
+          title: const Text('NapCat WebUI'),
+          subtitle: const Text('启用或禁用 NapCat 网页控制面板（默认关闭）'),
+          trailing: Switch(
+            value: homeController.napCatWebUiEnabled.get() ?? false,
+            onChanged: (bool value) {
+              // 使用新的方法来同步更新响应式变量
+              homeController.setNapCatWebUiEnabled(value);
+
+              Get.snackbar(
+                value ? 'WebUI 已启用' : 'WebUI 已禁用',
+                value ? 'NapCat 标签页已显示，可以立即访问控制面板' : 'NapCat 标签页已隐藏',
+                snackPosition: SnackPosition.BOTTOM,
+                duration: const Duration(seconds: 2),
+              );
+            },
+          ),
+        ),
+        Obx(() {
+          final token = homeController.napCatWebUiToken.value;
+          return ListTile(
+            leading: const Icon(Icons.vpn_key),
+            title: const Text('NapCat登录token'),
+            subtitle: Text(token.isEmpty ? '暂未获取到token' : token),
+            onTap: token.isEmpty
+                ? null
+                : () async {
+                    final fullUrl = 'http://localhost:6099/webui?token=$token';
+                    await Clipboard.setData(ClipboardData(text: fullUrl));
+                    Get.snackbar(
+                      '已复制',
+                      '完整登录链接已复制到剪贴板',
+                      snackPosition: SnackPosition.BOTTOM,
+                      duration: const Duration(seconds: 2),
+                    );
+                  },
+          );
+        }),
+        ListTile(
           leading: const Icon(Icons.code),
           title: const Text('自定义 Git Clone 命令'),
           subtitle: const Text('自定义 AstrBot 的获取方式'),
           onTap: () => _showCustomGitCloneDialog(),
-        ),
-        ListTile(
-          leading: const Icon(Icons.backup),
-          title: const Text('备份 AstrBot 数据'),
-          subtitle: const Text('备份 AstrBot 配置和数据到手机存储'),
-          onTap: () async {
-            Get.dialog(
-              const Center(child: CircularProgressIndicator()),
-              barrierDismissible: false,
-            );
-
-            try {
-              await _performBackup();
-            } finally {
-              Get.back(); // 关闭加载提示
-            }
-          },
         ),
         ListTile(
           leading: const Icon(Icons.delete_outline),
