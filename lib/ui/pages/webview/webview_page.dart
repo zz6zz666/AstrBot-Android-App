@@ -20,6 +20,8 @@ class WebViewPage extends StatefulWidget {
 
 class _WebViewPageState extends State<WebViewPage> {
   int _currentIndex = 0;
+  int _previousNavItemCount = 0; // 记录上一次导航栏项目数量
+
   late final WebViewController _astrBotController;
   late final WebViewController _napCatController;
   final Map<String, WebViewController> _customControllers = {}; // 存储自定义 WebView 控制器，使用 URL 作为 key
@@ -490,14 +492,28 @@ class _WebViewPageState extends State<WebViewPage> {
         }),
       ];
 
-      // 计算设置页的索引(终端页在倒数第二,设置页在最后)
+      // 计算设置页的索引（终端页在倒数第二，设置页在最后）
       final int settingsIndex = pages.length + 1;
+      final int currentNavItemCount = pages.length + 2; // 总导航项数量
 
-      // 确保 currentIndex 不超出范围
-      // 如果当前索引超出范围,说明用户在设置页,需要调整到正确的设置页索引
-      final int validCurrentIndex = _currentIndex > settingsIndex
-          ? settingsIndex
-          : _currentIndex;
+      // 最简单的逻辑：导航栏数量变化时，直接锁定焦点到最大值（设置页）
+      int validCurrentIndex = _currentIndex;
+      if (_previousNavItemCount != 0 && _previousNavItemCount != currentNavItemCount) {
+        // 导航栏数量发生变化，锁定到设置页
+        validCurrentIndex = settingsIndex;
+        _previousNavItemCount = currentNavItemCount;
+        // 异步更新状态
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) {
+            setState(() {
+              _currentIndex = settingsIndex;
+            });
+          }
+        });
+      } else if (_previousNavItemCount == 0) {
+        // 首次加载，记录导航栏数量
+        _previousNavItemCount = currentNavItemCount;
+      }
 
       return AnnotatedRegion<SystemUiOverlayStyle>(
         value: const SystemUiOverlayStyle(
