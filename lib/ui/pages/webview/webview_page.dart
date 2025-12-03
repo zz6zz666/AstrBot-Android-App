@@ -5,6 +5,7 @@ import 'package:webview_flutter/webview_flutter.dart';
 import 'package:webview_flutter_android/webview_flutter_android.dart';
 import 'package:xterm/xterm.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../controllers/terminal_controller.dart';
 import '../settings/settings_page.dart';
 import '../terminal/terminal_theme.dart';
@@ -69,14 +70,83 @@ class _WebViewPageState extends State<WebViewPage> {
     ));
   }
 
+  // 检查URL是否为本地地址
+  bool _isLocalUrl(String url) {
+    try {
+      final uri = Uri.parse(url);
+      final host = uri.host.toLowerCase();
+      // 检查是否为本地地址
+      return host == 'localhost' ||
+             host == '127.0.0.1' ||
+             host == '0.0.0.0' ||
+             host.startsWith('192.168.') ||
+             host.startsWith('10.') ||
+             (host.startsWith('172.') && _isPrivateIp172(host));
+    } catch (e) {
+      debugPrint('Error parsing URL: $e');
+      return false;
+    }
+  }
+
+  // 检查是否为172.16.0.0 - 172.31.255.255范围的私有IP
+  bool _isPrivateIp172(String host) {
+    final parts = host.split('.');
+    if (parts.length >= 2) {
+      final secondOctet = int.tryParse(parts[1]);
+      return secondOctet != null && secondOctet >= 16 && secondOctet <= 31;
+    }
+    return false;
+  }
+
+  // 在外部浏览器中打开URL
+  Future<void> _launchInBrowser(String url) async {
+    try {
+      final uri = Uri.parse(url);
+      if (await canLaunchUrl(uri)) {
+        await launchUrl(
+          uri,
+          mode: LaunchMode.externalApplication,
+        );
+      } else {
+        debugPrint('Cannot launch URL: $url');
+        if (mounted) {
+          Get.snackbar(
+            '无法打开链接',
+            '无法在浏览器中打开此链接',
+            snackPosition: SnackPosition.BOTTOM,
+          );
+        }
+      }
+    } catch (e) {
+      debugPrint('Error launching URL: $e');
+      if (mounted) {
+        Get.snackbar(
+          '打开失败',
+          '打开链接时出错: $e',
+          snackPosition: SnackPosition.BOTTOM,
+        );
+      }
+    }
+  }
+
   void _initAstrBotController() {
     _astrBotController = WebViewController()
       ..setJavaScriptMode(JavaScriptMode.unrestricted)
       ..setBackgroundColor(Colors.white)
       ..setNavigationDelegate(
         NavigationDelegate(
+          onNavigationRequest: (NavigationRequest request) {
+            // 拦截外域URL
+            if (!_isLocalUrl(request.url)) {
+              debugPrint('Intercepting external URL: ${request.url}');
+              _launchInBrowser(request.url);
+              return NavigationDecision.prevent;
+            }
+            return NavigationDecision.navigate;
+          },
           onPageFinished: (String url) {
             _injectClipboardScript(_astrBotController);
+            _disableZoom(_astrBotController);
           },
           onWebResourceError: (WebResourceError error) {
             debugPrint('AstrBot WebView error: ${error.description}');
@@ -119,6 +189,18 @@ class _WebViewPageState extends State<WebViewPage> {
       ..setBackgroundColor(Colors.white)
       ..setNavigationDelegate(
         NavigationDelegate(
+          onNavigationRequest: (NavigationRequest request) {
+            // 拦截外域URL
+            if (!_isLocalUrl(request.url)) {
+              debugPrint('Intercepting external URL: ${request.url}');
+              _launchInBrowser(request.url);
+              return NavigationDecision.prevent;
+            }
+            return NavigationDecision.navigate;
+          },
+          onPageFinished: (String url) {
+            _disableZoom(_napCatController);
+          },
           onWebResourceError: (WebResourceError error) {
             debugPrint('NapCat WebView error: ${error.description}');
           },
@@ -158,11 +240,28 @@ class _WebViewPageState extends State<WebViewPage> {
 
   // 创建自定义 WebView 控制器
   WebViewController _createCustomController(String url) {
-    final controller = WebViewController()
+    final controller = WebViewController();
+
+    // 检查初始URL是否为本地地址，如果是则启用外域拦截
+    final shouldInterceptExternal = _isLocalUrl(url);
+
+    controller
       ..setJavaScriptMode(JavaScriptMode.unrestricted)
       ..setBackgroundColor(Colors.white)
       ..setNavigationDelegate(
         NavigationDelegate(
+          onNavigationRequest: (NavigationRequest request) {
+            // 仅对配置为本地URL的WebView启用外域拦截
+            if (shouldInterceptExternal && !_isLocalUrl(request.url)) {
+              debugPrint('Intercepting external URL from custom WebView: ${request.url}');
+              _launchInBrowser(request.url);
+              return NavigationDecision.prevent;
+            }
+            return NavigationDecision.navigate;
+          },
+          onPageFinished: (String url) {
+            _disableZoom(controller);
+          },
           onWebResourceError: (WebResourceError error) {
             debugPrint('Custom WebView error: ${error.description}');
           },
@@ -307,6 +406,38 @@ class _WebViewPageState extends State<WebViewPage> {
           }, 100);
         });
       };
+    ''';
+    controller.runJavaScript(jsCode);
+  }
+
+  void _disableZoom(WebViewController controller) {
+    const String jsCode = '''
+      (function() {
+        var meta = document.querySelector('meta[name="viewport"]');
+        if (meta) {
+          meta.content = 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no';
+        } else {
+          meta = document.createElement('meta');
+          meta.name = 'viewport';
+          meta.content = 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no';
+          document.head.appendChild(meta);
+        }
+
+        // 禁用双击缩放
+        var lastTouchEnd = 0;
+        document.addEventListener('touchend', function(event) {
+          var now = Date.now();
+          if (now - lastTouchEnd <= 300) {
+            event.preventDefault();
+          }
+          lastTouchEnd = now;
+        }, false);
+
+        // 禁用手势缩放
+        document.addEventListener('gesturestart', function(event) {
+          event.preventDefault();
+        }, false);
+      })();
     ''';
     controller.runJavaScript(jsCode);
   }
