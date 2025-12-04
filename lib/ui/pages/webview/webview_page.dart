@@ -681,7 +681,7 @@ class _WebViewPageState extends State<WebViewPage> {
                 // 4. 终端页面
                 TerminalView(
                   homeController.terminal,
-                  readOnly: false,
+                  readOnly: true,
                   backgroundOpacity: 1,
                   theme: ManjaroTerminalTheme(),
                 ),
