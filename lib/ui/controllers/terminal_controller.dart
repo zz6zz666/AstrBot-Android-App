@@ -50,7 +50,7 @@ class HomeController extends GetxController {
   File progressFile = File('${RuntimeEnvir.tmpPath}/progress');
   File progressDesFile = File('${RuntimeEnvir.tmpPath}/progress_des');
   double progress = 0.0;
-  double step = 13.0;
+  double step = 14.0;
   String currentProgress = '';
 
   // 进度 +1
@@ -100,10 +100,11 @@ class HomeController extends GetxController {
         final colorCode = int.tryParse(c.trim());
         if (colorCode != null) {
           // 有效的颜色代码(非白色且非重置)
-          if ((colorCode >= 30 && colorCode <= 36) ||  // 前景色(黑到青)
-              (colorCode >= 40 && colorCode <= 47) ||  // 背景色
-              (colorCode >= 90 && colorCode <= 96) ||  // 高亮前景色(非白)
-              (colorCode >= 100 && colorCode <= 107)) { // 高亮背景色
+          if ((colorCode >= 30 && colorCode <= 36) || // 前景色(黑到青)
+              (colorCode >= 40 && colorCode <= 47) || // 背景色
+              (colorCode >= 90 && colorCode <= 96) || // 高亮前景色(非白)
+              (colorCode >= 100 && colorCode <= 107)) {
+            // 高亮背景色
             return true;
           }
         }
@@ -135,7 +136,9 @@ class HomeController extends GetxController {
     }
 
     // 检查是否有完整的行(以换行符结尾)或者包含重置代码
-    if (_pendingOutput.endsWith('\n') || _pendingOutput.endsWith('\r\n') || hasReset) {
+    if (_pendingOutput.endsWith('\n') ||
+        _pendingOutput.endsWith('\r\n') ||
+        hasReset) {
       // 如果处于彩色上下文中,输出所有内容
       if (_isInColoredContext) {
         terminal.write(_pendingOutput);
@@ -152,7 +155,10 @@ class HomeController extends GetxController {
   // 检查两个条件是否都满足，如果满足则触发跳转
   void _checkAndNavigateToWebview() {
     // 只有当两个条件都满足且应用在前台时才跳转
-    if (_isLocalhostDetected && _isQrcodeProcessed && _isAppInForeground && !webviewHasOpen) {
+    if (_isLocalhostDetected &&
+        _isQrcodeProcessed &&
+        _isAppInForeground &&
+        !webviewHasOpen) {
       Future.microtask(() {
         // 使用路由跳转
         Get.toNamed(AppRoutes.webview);
@@ -411,7 +417,8 @@ class HomeController extends GetxController {
         currentProgress = content;
 
         // 当进度到达 "Napcat 已安装" 时，启动 NapCat 终端
-        if (content.contains('Napcat') && content.contains(S.current.installed)) {
+        if (content.contains('Napcat') &&
+            content.contains(S.current.installed)) {
           napcatTerminal?.writeString('$command\n');
           bumpProgress();
           Log.i('检测到 Napcat 已安装，启动 NapCat 终端', tag: 'AstrBot');
