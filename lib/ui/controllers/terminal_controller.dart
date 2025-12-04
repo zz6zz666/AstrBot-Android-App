@@ -44,6 +44,8 @@ class HomeController extends GetxController {
   bool _isQrcodeProcessed = false; // 二维码处理完成标志
   bool _isAppInForeground = true; // 应用是否在前台
   bool _isAstrBotConfiguring = false; // AstrBot 配置中标志，用于控制终端输出过滤
+  bool _isInColoredContext = false; // 是否处于彩色输出上下文中
+  String _pendingOutput = ''; // 待处理的输出缓冲
 
   File progressFile = File('${RuntimeEnvir.tmpPath}/progress');
   File progressDesFile = File('${RuntimeEnvir.tmpPath}/progress_des');
@@ -110,6 +112,43 @@ class HomeController extends GetxController {
     return false;
   }
 
+  // 检测文本是否包含 ANSI 重置代码
+  // Check if text contains ANSI reset code
+  bool _hasResetCode(String text) {
+    // 匹配重置代码: \x1b[0m 或 \033[0m
+    final resetRegex = RegExp(r'\x1b\[0m|\033\[0m');
+    return resetRegex.hasMatch(text);
+  }
+
+  // 处理彩色输出过滤逻辑
+  // Handle colored output filtering logic
+  void _processColoredOutput(String event) {
+    _pendingOutput += event;
+
+    // 检查是否包含彩色代码
+    final hasColor = _hasColoredAnsiCode(_pendingOutput);
+    final hasReset = _hasResetCode(_pendingOutput);
+
+    if (hasColor) {
+      // 找到彩色代码,进入彩色上下文
+      _isInColoredContext = true;
+    }
+
+    // 检查是否有完整的行(以换行符结尾)或者包含重置代码
+    if (_pendingOutput.endsWith('\n') || _pendingOutput.endsWith('\r\n') || hasReset) {
+      // 如果处于彩色上下文中,输出所有内容
+      if (_isInColoredContext) {
+        terminal.write(_pendingOutput);
+      }
+      // 清空缓冲
+      _pendingOutput = '';
+      // 如果包含重置代码,退出彩色上下文
+      if (hasReset) {
+        _isInColoredContext = false;
+      }
+    }
+  }
+
   // 检查两个条件是否都满足，如果满足则触发跳转
   void _checkAndNavigateToWebview() {
     // 只有当两个条件都满足且应用在前台时才跳转
@@ -160,10 +199,8 @@ class HomeController extends GetxController {
       // 只在 AstrBot 配置阶段才过滤非彩色输出
       // Only filter non-colored output after AstrBot configuration starts
       if (_isAstrBotConfiguring) {
-        // 只显示包含彩色 ANSI 代码的输出到终端
-        if (_hasColoredAnsiCode(event)) {
-          terminal.write(event);
-        }
+        // 使用新的彩色输出处理逻辑,支持多行彩色输出
+        _processColoredOutput(event);
       } else {
         // 配置前显示所有输出
         terminal.write(event);
