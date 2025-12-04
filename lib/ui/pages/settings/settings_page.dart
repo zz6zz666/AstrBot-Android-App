@@ -417,7 +417,7 @@ class _SettingsPageState extends State<SettingsPage> {
               decoration: const InputDecoration(
                 labelText: 'URL',
                 hintText: '例如：6099/webui?token=***',
-                helperText: '自动添加前缀 http://127.0.0.1: \n若需使用https,请手动输入完整URL',
+                helperText: '自动添加前缀 http://127.0.0.1: \n若需使用https，请手动输入完整URL',
                 border: OutlineInputBorder(),
               ),
               keyboardType: TextInputType.url,
@@ -1392,7 +1392,7 @@ class _SettingsPageState extends State<SettingsPage> {
           },
         ),
         ListTile(
-          leading: const Icon(Icons.delete_forever),
+          leading: const Icon(Icons.delete),
           title: const Text('清除 AstrBot 数据'),
           subtitle: const Text('清除 AstrBot 配置和数据，\n重启时自动从备份恢复或重新初始化'),
           onTap: () async {

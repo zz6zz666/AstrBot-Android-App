@@ -315,18 +315,18 @@ install_astrbot(){
 
         else
           echo "备份恢复失败，使用默认配置"
-          cp cmd_config.json "$INSTALL_DIR/data"
+          cp "$HOME/cmd_config.json" "$INSTALL_DIR/data"
           chmod +w "$INSTALL_DIR/data/cmd_config.json"
         fi
       else
         echo "未找到备份文件，使用默认配置"
-        cp cmd_config.json "$INSTALL_DIR/data"
+        cp "$HOME/cmd_config.json" "$INSTALL_DIR/data"
         chmod +w "$INSTALL_DIR/data/cmd_config.json"
         echo "拷贝 cmd_config.json 默认配置文件"
       fi
     else
       echo "备份目录不存在，使用默认配置"
-      cp cmd_config.json "$INSTALL_DIR/data"
+      cp "$HOME/cmd_config.json" "$INSTALL_DIR/data"
       chmod +w "$INSTALL_DIR/data/cmd_config.json"
       echo "拷贝 cmd_config.json 默认配置文件"
     fi
@@ -379,6 +379,9 @@ install_astrbot(){
 
   # 使用 uv run --no-sync main.py 启动（跳过依赖同步）
   progress_echo "AstrBot 配置中"
+
+  # 终端清屏
+  clear
 
   if ! $HOME/.local/bin/uv run --no-sync main.py; then
     echo "AstrBot 启动失败"

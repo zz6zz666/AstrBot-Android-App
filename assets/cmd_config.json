@@ -62,9 +62,19 @@
     "dequeue_context_length": 1,
     "streaming_response": false,
     "show_tool_use_status": false,
+    "agent_runner_type": "local",
+    "dify_agent_runner_provider_id": "",
+    "coze_agent_runner_provider_id": "",
+    "dashscope_agent_runner_provider_id": "",
     "unsupported_streaming_strategy": "realtime_segmenting",
+    "reachability_check": false,
     "max_agent_step": 30,
-    "tool_call_timeout": 60
+    "tool_call_timeout": 60,
+    "file_extract": {
+      "enable": false,
+      "provider": "moonshotai",
+      "moonshotai_api_key": ""
+    }
   },
   "provider_stt_settings": {
     "enable": false,
@@ -80,6 +90,7 @@
     "group_icl_enable": false,
     "group_message_max_cnt": 300,
     "image_caption": false,
+    "image_caption_provider_id": "",
     "active_reply": {
       "enable": false,
       "method": "possibility_reply",
@@ -166,5 +177,6 @@
   ],
   "kb_names": [],
   "kb_fusion_top_k": 20,
-  "kb_final_top_k": 5
+  "kb_final_top_k": 5,
+  "kb_agentic_mode": false
 }
