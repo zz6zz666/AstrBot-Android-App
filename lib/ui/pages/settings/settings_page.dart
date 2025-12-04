@@ -11,6 +11,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import '../../controllers/terminal_controller.dart';
 import '../../../core/constants/scripts.dart' as scripts;
+import '../../../core/services/password_manager.dart';
 
 class SettingsPage extends StatefulWidget {
   final WebViewController astrBotController;
@@ -1613,15 +1614,16 @@ class _SettingsPageState extends State<SettingsPage> {
         ListTile(
           leading: const Icon(Icons.delete_outline),
           title: const Text('清空 WebView 缓存'),
-          subtitle: const Text('清理所有 WebView 浏览器缓存'),
+          subtitle: const Text('清理所有 WebView 缓存和密码'),
           onTap: () async {
             try {
               await widget.astrBotController.clearCache();
               await widget.napCatController.clearCache();
+              await PasswordManager.clearAllPasswords();
               if (context.mounted) {
                 Get.snackbar(
                   '成功',
-                  'WebView 缓存已清理',
+                  'WebView 缓存和密码已清理',
                   snackPosition: SnackPosition.BOTTOM,
                 );
               }

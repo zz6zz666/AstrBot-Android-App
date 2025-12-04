@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
@@ -10,6 +11,7 @@ import '../../controllers/terminal_controller.dart';
 import '../settings/settings_page.dart';
 import '../terminal/terminal_theme.dart';
 import '../../navbar/bottom_nav_bar.dart';
+import '../../../core/services/password_manager.dart';
 
 class WebViewPage extends StatefulWidget {
   const WebViewPage({super.key});
@@ -149,6 +151,7 @@ class _WebViewPageState extends State<WebViewPage> {
           onPageFinished: (String url) {
             _injectClipboardScript(_astrBotController);
             _disableZoom(_astrBotController);
+            _injectPasswordScript(_astrBotController, url);
           },
           onWebResourceError: (WebResourceError error) {
             debugPrint('AstrBot WebView error: ${error.description}');
@@ -176,6 +179,8 @@ class _WebViewPageState extends State<WebViewPage> {
       onMessageReceived: (JavaScriptMessage message) {
         if (message.message == 'getClipboardData') {
           _getClipboardData(_astrBotController);
+        } else if (message.message.startsWith('savePassword:')) {
+          _handlePasswordSave(message.message);
         }
       },
     );
@@ -202,6 +207,7 @@ class _WebViewPageState extends State<WebViewPage> {
           },
           onPageFinished: (String url) {
             _disableZoom(_napCatController);
+            _injectPasswordScript(_napCatController, url);
           },
           onWebResourceError: (WebResourceError error) {
             debugPrint('NapCat WebView error: ${error.description}');
@@ -238,6 +244,15 @@ class _WebViewPageState extends State<WebViewPage> {
       // 设置文件选择回调
       androidController.setOnShowFileSelector(_handleFileSelection);
     }
+
+    _napCatController.addJavaScriptChannel(
+      'Android',
+      onMessageReceived: (JavaScriptMessage message) {
+        if (message.message.startsWith('savePassword:')) {
+          _handlePasswordSave(message.message);
+        }
+      },
+    );
   }
 
   // 创建自定义 WebView 控制器
@@ -261,8 +276,9 @@ class _WebViewPageState extends State<WebViewPage> {
             }
             return NavigationDecision.navigate;
           },
-          onPageFinished: (String url) {
+          onPageFinished: (String pageUrl) {
             _disableZoom(controller);
+            _injectPasswordScript(controller, pageUrl);
           },
           onWebResourceError: (WebResourceError error) {
             debugPrint('Custom WebView error: ${error.description}');
@@ -281,6 +297,15 @@ class _WebViewPageState extends State<WebViewPage> {
       // 设置文件选择回调
       androidController.setOnShowFileSelector(_handleFileSelection);
     }
+
+    controller.addJavaScriptChannel(
+      'Android',
+      onMessageReceived: (JavaScriptMessage message) {
+        if (message.message.startsWith('savePassword:')) {
+          _handlePasswordSave(message.message);
+        }
+      },
+    );
 
     return controller;
   }
@@ -461,6 +486,129 @@ class _WebViewPageState extends State<WebViewPage> {
     final clipboardData = await Clipboard.getData(Clipboard.kTextPlain);
     final text = clipboardData?.text ?? '';
     controller.runJavaScript('window.clipboardText = "$text";');
+  }
+
+  // 注入密码捕获和自动填充脚本
+  void _injectPasswordScript(WebViewController controller, String url) {
+    // 先尝试加载已保存的密码
+    final savedPassword = PasswordManager.getPassword(url);
+
+    final String jsCode = '''
+      (function() {
+        // 自动填充已保存的密码
+        ${savedPassword != null ? '''
+        function autoFillPassword() {
+          const usernameFields = document.querySelectorAll('input[type="text"], input[type="email"], input[name*="user"], input[name*="account"], input[id*="user"], input[id*="account"]');
+          const passwordFields = document.querySelectorAll('input[type="password"]');
+
+          if (usernameFields.length > 0 && passwordFields.length > 0) {
+            usernameFields[0].value = '${savedPassword['username']?.replaceAll("'", "\\'")}';
+            passwordFields[0].value = '${savedPassword['password']?.replaceAll("'", "\\'")}';
+
+            // 触发input事件，确保框架能检测到值变化
+            usernameFields[0].dispatchEvent(new Event('input', { bubbles: true }));
+            passwordFields[0].dispatchEvent(new Event('input', { bubbles: true }));
+          }
+        }
+
+        // 页面加载完成后自动填充
+        if (document.readyState === 'loading') {
+          document.addEventListener('DOMContentLoaded', autoFillPassword);
+        } else {
+          autoFillPassword();
+        }
+
+        // 延迟填充,确保动态表单也能被填充
+        setTimeout(autoFillPassword, 500);
+        setTimeout(autoFillPassword, 1000);
+        ''' : ''}
+
+        // 监听表单提交,捕获密码
+        function capturePassword(event) {
+          const form = event.target;
+          const usernameField = form.querySelector('input[type="text"], input[type="email"], input[name*="user"], input[name*="account"], input[id*="user"], input[id*="account"]');
+          const passwordField = form.querySelector('input[type="password"]');
+
+          if (usernameField && passwordField) {
+            const username = usernameField.value;
+            const password = passwordField.value;
+
+            if (username && password) {
+              // 发送到Flutter端保存
+              try {
+                Android.postMessage('savePassword:' + JSON.stringify({
+                  url: window.location.href,
+                  username: username,
+                  password: password
+                }));
+              } catch(e) {
+                console.log('Failed to save password:', e);
+              }
+            }
+          }
+        }
+
+        // 监听所有表单的submit事件
+        document.addEventListener('submit', capturePassword, true);
+
+        // 监听可能的登录按钮点击(某些页面不用form标签)
+        document.addEventListener('click', function(event) {
+          const target = event.target;
+          // 检查是否是登录按钮
+          if (target.tagName === 'BUTTON' || target.type === 'submit' ||
+              target.textContent.includes('登录') || target.textContent.includes('Login') ||
+              target.textContent.includes('Sign in') || target.textContent.includes('提交')) {
+
+            setTimeout(function() {
+              const passwordFields = document.querySelectorAll('input[type="password"]');
+              if (passwordFields.length > 0) {
+                const passwordField = passwordFields[0];
+                const form = passwordField.closest('form') || passwordField.parentElement;
+                const usernameField = form.querySelector('input[type="text"], input[type="email"], input[name*="user"], input[name*="account"], input[id*="user"], input[id*="account"]');
+
+                if (usernameField && passwordField.value) {
+                  try {
+                    Android.postMessage('savePassword:' + JSON.stringify({
+                      url: window.location.href,
+                      username: usernameField.value,
+                      password: passwordField.value
+                    }));
+                  } catch(e) {
+                    console.log('Failed to save password:', e);
+                  }
+                }
+              }
+            }, 100);
+          }
+        }, true);
+      })();
+    ''';
+
+    controller.runJavaScript(jsCode);
+  }
+
+  // 处理密码保存请求
+  void _handlePasswordSave(String message) {
+    try {
+      // 消息格式: "savePassword:{json}"
+      final jsonStr = message.substring('savePassword:'.length);
+      final data = jsonDecode(jsonStr) as Map<String, dynamic>;
+
+      final url = data['url'] as String?;
+      final username = data['username'] as String?;
+      final password = data['password'] as String?;
+
+      if (url != null && username != null && password != null) {
+        PasswordManager.savePassword(
+          url: url,
+          username: username,
+          password: password,
+        );
+        debugPrint('Password saved for: $url');
+      }
+    } catch (e) {
+      debugPrint('Error saving password: $e');
+    }
   }
 
   @override
