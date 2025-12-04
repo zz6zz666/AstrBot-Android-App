@@ -139,7 +139,6 @@ install_ubuntu(){
       rm -rf "$PERSISTENT_BACKUP"
     fi
   else
-    echo "[state] $UBUNTU_PATH not empty, skip extraction"
     VERSION=`cat $UBUNTU_PATH/etc/issue.net 2>/dev/null`
     # VERSION=`cat $UBUNTU_PATH/etc/issue 2>/dev/null | sed 's/\\n//g' | sed 's/\\l//g'`
     progress_echo "Ubuntu $L_INSTALLED -> $VERSION"
@@ -474,33 +473,55 @@ login_ubuntu(){
       LANG=en_US.UTF-8 \
       PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin \
       COMMAND_TO_EXEC="$COMMAND_TO_EXEC" \
-      /bin/bash -lc "echo LOGIN_SUCCESSFUL; echo TERMINAL_READY; eval \"\$COMMAND_TO_EXEC\""
+      /bin/bash -lc "eval \"\$COMMAND_TO_EXEC\""
 }
 ''';
 
 String copyFiles = r'''
 copy_files(){
-  mkdir -p $UBUNTU_PATH/root
-  # 检查启动脚本版本号，不一致时才替换
-  SHOULD_COPY=1
-  CURRENT_VERSION="''' + Config.versionName + r'''"
+  mkdir -p "$UBUNTU_PATH/root"
 
+  # 当前版本号（来自 Java/Kotlin Config）
+  CURRENT_VERSION="''' +
+    Config.versionName +
+    r'''"
+
+  # 初始化标志
+  SHOULD_COPY=1
+  EXISTING_VERSION=""
+
+  # 检查旧脚本是否存在并提取版本
   if [ -f "$UBUNTU_PATH/root/astrbot-startup.sh" ]; then
-    # 提取现有启动脚本的版本号
-    EXISTING_VERSION=$(head -n 10 "$UBUNTU_PATH/root/astrbot-startup.sh" | grep -oP 'ASTRBOT_APP_VERSION="\K[^"]+' 2>/dev/null || echo "")
-    if [ "$EXISTING_VERSION" = "$CURRENT_VERSION" ]; then
-      SHOULD_COPY=0
-    fi
+    EXISTING_VERSION=$(grep -oP 'ASTRBOT_APP_VERSION="\K[^"]+' "$UBUNTU_PATH/root/astrbot-startup.sh" 2>/dev/null)
+  fi
+
+  # 判断是否需要复制
+  if [ "$EXISTING_VERSION" = "$CURRENT_VERSION" ]; then
+    SHOULD_COPY=0
   fi
 
   if [ "$SHOULD_COPY" -eq 1 ]; then
-    cp ~/astrbot-startup.sh $UBUNTU_PATH/root/astrbot-startup.sh
-    echo "启动脚本版本不一致(现有: $EXISTING_VERSION, 当前: $CURRENT_VERSION)，已更新启动脚本"
+    # 提取旧脚本的完整 CUSTOM_GIT_CLONE 行(保留原始格式)
+    OLD_GIT_CLONE_LINE=$(grep '^CUSTOM_GIT_CLONE=' "$UBUNTU_PATH/root/astrbot-startup.sh" 2>/dev/null)
+
+    # 复制新启动脚本
+    cp ~/astrbot-startup.sh "$UBUNTU_PATH/root/astrbot-startup.sh"
+
+    # 如果旧脚本有自定义 Git Clone 配置(非空值),则替换新脚本中的默认值
+    if [ -n "$OLD_GIT_CLONE_LINE" ] && ! echo "$OLD_GIT_CLONE_LINE" | grep -q '=""$'; then
+      # 直接替换整行,保持用户原始配置
+      sed -i "s|^CUSTOM_GIT_CLONE=.*|$OLD_GIT_CLONE_LINE|" "$UBUNTU_PATH/root/astrbot-startup.sh"
+      echo "启动脚本版本不一致(现有: $EXISTING_VERSION, 当前: $CURRENT_VERSION)，已更新启动脚本"
+      echo "✓ 已保留自定义 Git Clone 配置"
+    else
+      echo "启动脚本版本不一致(现有: $EXISTING_VERSION, 当前: $CURRENT_VERSION)，已更新启动脚本"
+    fi
   else
     echo "启动脚本版本一致($CURRENT_VERSION)，无需更新"
   fi
+
   # cmd_config.json 每次都复制（保持原有逻辑）
-  cp ~/cmd_config.json $UBUNTU_PATH/root/cmd_config.json
+  cp ~/cmd_config.json "$UBUNTU_PATH/root/cmd_config.json"
 }
 ''';
 
