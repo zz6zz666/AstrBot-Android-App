@@ -449,6 +449,17 @@ login_ubuntu(){
   # - 绑定常见伪文件系统与外部存储，保障交互和软件包管理工作正常。
   # 在 proot 环境中创建 /storage/emulated 目录
   mkdir -p "$UBUNTU_PATH/storage/emulated" 2>/dev/null
+  # 获取Android系统的时区设置
+  ANDROID_TZ=$(getprop persist.sys.timezone 2>/dev/null)
+  if [ -z "$ANDROID_TZ" ]; then
+    # 如果获取不到系统时区,尝试备用方法
+    ANDROID_TZ=$(date +%Z 2>/dev/null)
+  fi
+  if [ -z "$ANDROID_TZ" ]; then
+    # 最终回退到默认时区
+    ANDROID_TZ="UTC"
+  fi
+
   exec $BIN/proot \
     -0 \
     -r "$UBUNTU_PATH" \
@@ -471,6 +482,7 @@ login_ubuntu(){
       HOME=/root \
       TERM=xterm-256color \
       LANG=en_US.UTF-8 \
+      TZ="$ANDROID_TZ" \
       PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin \
       COMMAND_TO_EXEC="$COMMAND_TO_EXEC" \
       /bin/bash -lc "eval \"\$COMMAND_TO_EXEC\""
