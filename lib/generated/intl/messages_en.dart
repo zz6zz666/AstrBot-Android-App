@@ -24,36 +24,33 @@ class MessageLookup extends MessageLookupByLibrary {
 
   final messages = _notInlinedMessages(_notInlinedMessages);
   static Map<String, Function> _notInlinedMessages(_) => <String, Function>{
-    "copy_code_server": m0,
-    "copy_proot_distro": MessageLookupByLibrary.simpleMessage(
-      "Copy proot-distro to data directory",
-    ),
-    "copy_ubuntu": MessageLookupByLibrary.simpleMessage(
-      "Copy ubuntu to data directory",
-    ),
-    "create_busybox_symlink": MessageLookupByLibrary.simpleMessage(
-      "Create Busybox symlink",
-    ),
-    "create_terminal_obj": MessageLookupByLibrary.simpleMessage(
-      "Create PTY Terminal Instance",
-    ),
-    "current_code_version": MessageLookupByLibrary.simpleMessage(
-      "Current VS Code Server Version",
-    ),
-    "define_functions": MessageLookupByLibrary.simpleMessage(
-      "Define functions to be used",
-    ),
-    "gen_script": MessageLookupByLibrary.simpleMessage(
-      "Generate Fix Hardlink Script",
-    ),
-    "installed": MessageLookupByLibrary.simpleMessage("Installed"),
-    "installing": MessageLookupByLibrary.simpleMessage("Installing"),
-    "listen_vscode_start": MessageLookupByLibrary.simpleMessage(
-      "Listen for VS Code start status to jump to Web View",
-    ),
-    "ubuntu_not_installed": MessageLookupByLibrary.simpleMessage(
-      "Ubuntu not installed, installing",
-    ),
-    "uninstalled": MessageLookupByLibrary.simpleMessage("Not Installed"),
-  };
+        "copy_code_server": m0,
+        "copy_proot_distro": MessageLookupByLibrary.simpleMessage(
+          "Copy proot-distro to data directory",
+        ),
+        "copy_ubuntu": MessageLookupByLibrary.simpleMessage(
+          "Copy ubuntu to data directory",
+        ),
+        "create_busybox_symlink": MessageLookupByLibrary.simpleMessage(
+          "Create Busybox symlink",
+        ),
+        "create_terminal_obj": MessageLookupByLibrary.simpleMessage(
+          "Create PTY Terminal Instance",
+        ),
+        "define_functions": MessageLookupByLibrary.simpleMessage(
+          "Define functions to be used",
+        ),
+        "gen_script": MessageLookupByLibrary.simpleMessage(
+          "Generate Fix Hardlink Script",
+        ),
+        "installed": MessageLookupByLibrary.simpleMessage("Installed"),
+        "installing": MessageLookupByLibrary.simpleMessage("Installing"),
+        "listen_vscode_start": MessageLookupByLibrary.simpleMessage(
+          "Listen for VS Code start status to jump to Web View",
+        ),
+        "ubuntu_not_installed": MessageLookupByLibrary.simpleMessage(
+          "Ubuntu not installed, installing",
+        ),
+        "uninstalled": MessageLookupByLibrary.simpleMessage("Not Installed"),
+      };
 }

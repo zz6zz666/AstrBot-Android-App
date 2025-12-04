@@ -24,28 +24,26 @@ class MessageLookup extends MessageLookupByLibrary {
 
   final messages = _notInlinedMessages(_notInlinedMessages);
   static Map<String, Function> _notInlinedMessages(_) => <String, Function>{
-    "copy_code_server": m0,
-    "copy_proot_distro": MessageLookupByLibrary.simpleMessage(
-      "拷贝 proot-distro 到数据目录",
-    ),
-    "copy_ubuntu": MessageLookupByLibrary.simpleMessage("拷贝 ubuntu 到数据目录"),
-    "create_busybox_symlink": MessageLookupByLibrary.simpleMessage(
-      "创建 Busybox 符号链接",
-    ),
-    "create_terminal_obj": MessageLookupByLibrary.simpleMessage("创建 PTY 终端实例"),
-    "current_code_version": MessageLookupByLibrary.simpleMessage(
-      "当前 VS Code Server 版本",
-    ),
-    "define_functions": MessageLookupByLibrary.simpleMessage("定义需要使用的函数"),
-    "gen_script": MessageLookupByLibrary.simpleMessage("生成硬链接修复脚本"),
-    "installed": MessageLookupByLibrary.simpleMessage("已安装"),
-    "installing": MessageLookupByLibrary.simpleMessage("安装中"),
-    "listen_vscode_start": MessageLookupByLibrary.simpleMessage(
-      "监听VS Code启动状态以跳转Web View",
-    ),
-    "ubuntu_not_installed": MessageLookupByLibrary.simpleMessage(
-      "Ubuntu 未安装, 安装中",
-    ),
-    "uninstalled": MessageLookupByLibrary.simpleMessage("未安装"),
-  };
+        "copy_code_server": m0,
+        "copy_proot_distro": MessageLookupByLibrary.simpleMessage(
+          "拷贝 proot-distro 到数据目录",
+        ),
+        "copy_ubuntu": MessageLookupByLibrary.simpleMessage("拷贝 ubuntu 到数据目录"),
+        "create_busybox_symlink": MessageLookupByLibrary.simpleMessage(
+          "创建 Busybox 符号链接",
+        ),
+        "create_terminal_obj":
+            MessageLookupByLibrary.simpleMessage("创建 PTY 终端实例"),
+        "define_functions": MessageLookupByLibrary.simpleMessage("定义需要使用的函数"),
+        "gen_script": MessageLookupByLibrary.simpleMessage("生成硬链接修复脚本"),
+        "installed": MessageLookupByLibrary.simpleMessage("已安装"),
+        "installing": MessageLookupByLibrary.simpleMessage("安装中"),
+        "listen_vscode_start": MessageLookupByLibrary.simpleMessage(
+          "监听VS Code启动状态以跳转Web View",
+        ),
+        "ubuntu_not_installed": MessageLookupByLibrary.simpleMessage(
+          "Ubuntu 未安装, 安装中",
+        ),
+        "uninstalled": MessageLookupByLibrary.simpleMessage("未安装"),
+      };
 }

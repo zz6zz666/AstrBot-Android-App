@@ -18,12 +18,14 @@ class HomeController extends GetxController {
   // bool vsCodeStaring = false;
   SettingNode privacySetting = 'privacy'.setting;
   SettingNode napCatWebUiEnabled = 'napcat_webui_enabled'.setting;
+  SettingNode showTerminalWhiteText = 'show_terminal_white_text'.setting;
   Pty? pseudoTerminal;
   Pty? napcatTerminal;
 
   final RxString napCatWebUiToken = ''.obs; // 存储 NapCat WebUI Token
   final RxBool _isQrcodeShowing = false.obs;
   final RxBool napCatWebUiEnabledRx = false.obs; // GetX 响应式变量用于导航栏更新
+  final RxBool showTerminalWhiteTextRx = false.obs; // GetX 响应式变量用于设置页更新
   final RxList<Map<String, String>> customWebViews =
       <Map<String, String>>[].obs; // 自定义 WebView 列表
   Dialog? _qrcodeDialog;
@@ -44,7 +46,6 @@ class HomeController extends GetxController {
   bool _isQrcodeProcessed = false; // 二维码处理完成标志
   bool _isAppInForeground = true; // 应用是否在前台
   bool _isAstrBotConfiguring = false; // AstrBot 配置中标志，用于控制终端输出过滤
-  bool _isInColoredContext = false; // 是否处于彩色输出上下文中
   String _pendingOutput = ''; // 待处理的输出缓冲
 
   File progressFile = File('${RuntimeEnvir.tmpPath}/progress');
@@ -113,6 +114,91 @@ class HomeController extends GetxController {
     return false;
   }
 
+  // 检测文本是否为纯彩色输出(不含白色文本)
+  // Check if text is purely colored output (no white/default text)
+  bool _isPurelyColoredOutput(String text) {
+    // 移除所有 ANSI 代码后，检查是否还有可见文本
+    final ansiRegex = RegExp(r'\x1b\[[0-9;]*m|\033\[[0-9;]*m');
+    final cleanText = text.replaceAll(ansiRegex, '').trim();
+
+    // 如果移除 ANSI 代码后没有可见文本，说明是纯 ANSI 控制序列
+    if (cleanText.isEmpty) {
+      return _hasColoredAnsiCode(text);
+    }
+
+    // 如果有可见文本但没有任何彩色代码，说明是纯白色文本
+    if (!_hasColoredAnsiCode(text)) {
+      return false;
+    }
+
+    // 关键判断：检查文本中是否所有可见内容都被彩色 ANSI 代码包裹
+    // 策略：分段检查每个 ANSI 颜色代码后面的文本，直到遇到重置代码或下一个颜色代码
+    final ansiColorRegex = RegExp(
+      r'\x1b\[([0-9;]+)m|\033\[([0-9;]+)m',
+      multiLine: true,
+    );
+
+    int lastIndex = 0;
+    bool inColoredSection = false;
+    bool hasUncoloredText = false;
+
+    final matches = ansiColorRegex.allMatches(text).toList();
+
+    for (int i = 0; i < matches.length; i++) {
+      final match = matches[i];
+
+      // 检查当前 ANSI 代码之前的文本
+      if (match.start > lastIndex) {
+        final textBefore = text.substring(lastIndex, match.start).trim();
+        // 如果之前有文本且不在彩色段中，说明有未着色的白色文本
+        if (textBefore.isNotEmpty && !inColoredSection) {
+          hasUncoloredText = true;
+          break;
+        }
+      }
+
+      final code = match.group(1) ?? match.group(2) ?? '';
+      final codes = code.split(';');
+
+      // 检查这个 ANSI 代码是否是颜色代码(非白色)
+      bool isColorCode = false;
+      bool isResetCode = false;
+
+      for (var c in codes) {
+        final colorCode = int.tryParse(c.trim());
+        if (colorCode != null) {
+          if (colorCode == 0) {
+            isResetCode = true;
+          } else if ((colorCode >= 30 && colorCode <= 36) ||
+              (colorCode >= 40 && colorCode <= 47) ||
+              (colorCode >= 90 && colorCode <= 96) ||
+              (colorCode >= 100 && colorCode <= 107)) {
+            isColorCode = true;
+          }
+        }
+      }
+
+      if (isColorCode) {
+        inColoredSection = true;
+      } else if (isResetCode) {
+        inColoredSection = false;
+      }
+
+      lastIndex = match.end;
+    }
+
+    // 检查最后一个 ANSI 代码之后的文本
+    if (lastIndex < text.length) {
+      final textAfter = text.substring(lastIndex).trim();
+      if (textAfter.isNotEmpty && !inColoredSection) {
+        hasUncoloredText = true;
+      }
+    }
+
+    // 如果存在未着色的文本，说明不是纯彩色输出
+    return !hasUncoloredText;
+  }
+
   // 检测文本是否包含 ANSI 重置代码
   // Check if text contains ANSI reset code
   bool _hasResetCode(String text) {
@@ -126,29 +212,26 @@ class HomeController extends GetxController {
   void _processColoredOutput(String event) {
     _pendingOutput += event;
 
-    // 检查是否包含彩色代码
-    final hasColor = _hasColoredAnsiCode(_pendingOutput);
-    final hasReset = _hasResetCode(_pendingOutput);
-
-    if (hasColor) {
-      // 找到彩色代码,进入彩色上下文
-      _isInColoredContext = true;
+    // 检查设置：如果允许显示白色文本，则显示所有内容
+    if (showTerminalWhiteText.get() == true) {
+      terminal.write(event);
+      return;
     }
+
+    // 检查是否包含彩色代码和重置代码
+    final isPurelyColored = _isPurelyColoredOutput(_pendingOutput);
+    final hasReset = _hasResetCode(_pendingOutput);
 
     // 检查是否有完整的行(以换行符结尾)或者包含重置代码
     if (_pendingOutput.endsWith('\n') ||
         _pendingOutput.endsWith('\r\n') ||
         hasReset) {
-      // 如果处于彩色上下文中,输出所有内容
-      if (_isInColoredContext) {
+      // 只有当输出是纯彩色的（不包含白色文本）时才输出
+      if (isPurelyColored) {
         terminal.write(_pendingOutput);
       }
       // 清空缓冲
       _pendingOutput = '';
-      // 如果包含重置代码,退出彩色上下文
-      if (hasReset) {
-        _isInColoredContext = false;
-      }
     }
   }
 
@@ -424,10 +507,13 @@ class HomeController extends GetxController {
           Log.i('检测到 Napcat 已安装，启动 NapCat 终端', tag: 'AstrBot');
         }
 
-        // 当进度到达 "AstrBot 配置中" 时，开始过滤非彩色输出
+        // 当进度到达 "AstrBot 配置中" 时，开始过滤非彩色输出并清除终端
         if (content.trim() == 'AstrBot 配置中') {
           _isAstrBotConfiguring = true;
-          Log.i('检测到 AstrBot 配置中，开始过滤非彩色终端输出', tag: 'AstrBot');
+          // 清除终端先前显示的所有文本
+          terminal.buffer.clear();
+          terminal.buffer.setCursor(0, 0);
+          Log.i('检测到 AstrBot 配置中，清除终端内容并开始过滤非彩色终端输出', tag: 'AstrBot');
         }
 
         update();
@@ -545,6 +631,9 @@ class HomeController extends GetxController {
     // 初始化 NapCat WebUI 启用状态
     napCatWebUiEnabledRx.value = napCatWebUiEnabled.get() ?? false;
 
+    // 初始化显示终端白色文本状态
+    showTerminalWhiteTextRx.value = showTerminalWhiteText.get() ?? false;
+
     // 从持久化存储加载自定义 WebView 列表
     _loadCustomWebViews();
 
@@ -631,6 +720,12 @@ class HomeController extends GetxController {
   void setNapCatWebUiEnabled(bool value) {
     napCatWebUiEnabled.set(value);
     napCatWebUiEnabledRx.value = value;
+  }
+
+  // 更新显示终端白色文本状态（用于同步响应式变量）
+  void setShowTerminalWhiteText(bool value) {
+    showTerminalWhiteText.set(value);
+    showTerminalWhiteTextRx.value = value;
   }
 
   @override

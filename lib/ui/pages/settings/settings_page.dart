@@ -1561,7 +1561,7 @@ class _SettingsPageState extends State<SettingsPage> {
         ListTile(
           leading: const Icon(Icons.web),
           title: const Text('NapCat WebUI'),
-          subtitle: const Text('启用或禁用 NapCat 网页控制面板（默认关闭）'),
+          subtitle: const Text('显示或隐藏 NapCat 网页控制面板（默认隐藏）'),
           trailing: Switch(
             value: homeController.napCatWebUiEnabled.get() ?? false,
             onChanged: (bool value) {
@@ -1602,6 +1602,25 @@ class _SettingsPageState extends State<SettingsPage> {
           title: const Text('自定义 Git Clone 命令'),
           subtitle: const Text('自定义 AstrBot 的获取方式'),
           onTap: () => _showCustomGitCloneDialog(),
+        ),
+        ListTile(
+          leading: const Icon(Icons.text_fields),
+          title: const Text('显示终端白色文本日志'),
+          subtitle: const Text('是否在终端显示 AstrBot 白色文本日志（默认隐藏）'),
+          trailing: Obx(() => Switch(
+                value: homeController.showTerminalWhiteTextRx.value,
+                onChanged: (bool value) {
+                  // 使用新的方法来同步更新响应式变量
+                  homeController.setShowTerminalWhiteText(value);
+
+                  Get.snackbar(
+                    value ? '已启用白色文本显示' : '已禁用白色文本显示',
+                    value ? '终端将显示所有日志输出' : '终端将仅显示彩色日志输出',
+                    snackPosition: SnackPosition.BOTTOM,
+                    duration: const Duration(seconds: 2),
+                  );
+                },
+              )),
         ),
         ListTile(
           leading: const Icon(Icons.folder),

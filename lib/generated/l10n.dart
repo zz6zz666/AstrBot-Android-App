@@ -64,16 +64,6 @@ class S {
     );
   }
 
-  /// `Current VS Code Server Version`
-  String get current_code_version {
-    return Intl.message(
-      'Current VS Code Server Version',
-      name: 'current_code_version',
-      desc: '',
-      args: [],
-    );
-  }
-
   /// `Copy proot-distro to data directory`
   String get copy_proot_distro {
     return Intl.message(

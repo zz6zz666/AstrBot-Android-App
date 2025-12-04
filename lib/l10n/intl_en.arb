@@ -1,7 +1,6 @@
 {
   "@@locale": "en",
   "create_terminal_obj": "Create PTY Terminal Instance",
-  "current_code_version": "Current VS Code Server Version",
   "copy_proot_distro": "Copy proot-distro to data directory",
   "copy_ubuntu": "Copy ubuntu to data directory",
   "create_busybox_symlink": "Create Busybox symlink",
