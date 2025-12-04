@@ -331,6 +331,8 @@ install_astrbot(){
       echo "拷贝 cmd_config.json 默认配置文件"
     fi
     
+    rm -rf "$INSTALL_DIR/.venv"
+    
   fi
 
   if [ ! -d "$INSTALL_DIR/.venv" ]; then
