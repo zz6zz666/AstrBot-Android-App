@@ -481,16 +481,23 @@ login_ubuntu(){
 String copyFiles = r'''
 copy_files(){
   mkdir -p $UBUNTU_PATH/root
-  # 只在启动脚本存在且包含 CUSTOM_GIT_CLONE 变量时才不替换，其他情况都要替换
+  # 检查启动脚本版本号，不一致时才替换
   SHOULD_COPY=1
+  CURRENT_VERSION="''' + Config.versionName + r'''"
+
   if [ -f "$UBUNTU_PATH/root/astrbot-startup.sh" ]; then
-    if head -n 20 "$UBUNTU_PATH/root/astrbot-startup.sh" | grep -q "CUSTOM_GIT_CLONE"; then
+    # 提取现有启动脚本的版本号
+    EXISTING_VERSION=$(head -n 10 "$UBUNTU_PATH/root/astrbot-startup.sh" | grep -oP 'ASTRBOT_APP_VERSION="\K[^"]+' 2>/dev/null || echo "")
+    if [ "$EXISTING_VERSION" = "$CURRENT_VERSION" ]; then
       SHOULD_COPY=0
     fi
   fi
+
   if [ "$SHOULD_COPY" -eq 1 ]; then
     cp ~/astrbot-startup.sh $UBUNTU_PATH/root/astrbot-startup.sh
-    echo "未监测到启动脚本及自定义配置(CUSTOM_GIT_CLONE)，已更新启动脚本"
+    echo "启动脚本版本不一致(现有: $EXISTING_VERSION, 当前: $CURRENT_VERSION)，已更新启动脚本"
+  else
+    echo "启动脚本版本一致($CURRENT_VERSION)，无需更新"
   fi
   # cmd_config.json 每次都复制（保持原有逻辑）
   cp ~/cmd_config.json $UBUNTU_PATH/root/cmd_config.json
