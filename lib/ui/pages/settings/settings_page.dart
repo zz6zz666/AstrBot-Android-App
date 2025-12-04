@@ -1271,74 +1271,6 @@ class _SettingsPageState extends State<SettingsPage> {
           },
         ),
         ListTile(
-          leading: const Icon(Icons.refresh),
-          title: const Text('重置 Python 环境'),
-          subtitle: const Text('删除虚拟环境并重启应用，启动时将自动重建'),
-          onTap: () async {
-            // 显示确认对话框
-            final confirmed = await Get.dialog<bool>(
-              AlertDialog(
-                title: const Text('确认重置'),
-                content: const Text(
-                  '此操作将删除 Python 虚拟环境（.venv 目录）并退出应用。\n'
-                  '下次启动时会自动重建环境并安装所有插件依赖。\n\n'
-                  '是否继续？',
-                ),
-                actions: [
-                  TextButton(
-                    onPressed: () => Get.back(result: false),
-                    child: const Text('取消'),
-                  ),
-                  TextButton(
-                    onPressed: () => Get.back(result: true),
-                    child: const Text(
-                      '确定',
-                      style: TextStyle(color: Colors.orange),
-                    ),
-                  ),
-                ],
-              ),
-            );
-            if (confirmed == true) {
-              try {
-                final venvPath = '${scripts.ubuntuPath}/root/AstrBot/.venv';
-                final venvDir = Directory(venvPath);
-
-                if (await venvDir.exists()) {
-                  await venvDir.delete(recursive: true);
-                  Log.i('已删除 Python 虚拟环境: $venvPath', tag: 'AstrBot');
-
-                  Get.snackbar(
-                    '重置成功',
-                    'Python 环境已删除，应用即将退出',
-                    snackPosition: SnackPosition.BOTTOM,
-                    duration: const Duration(seconds: 2),
-                  );
-
-                  // 等待提示显示后退出应用
-                  await Future.delayed(const Duration(seconds: 2));
-                  exit(0);
-                } else {
-                  Get.snackbar(
-                    '提示',
-                    '虚拟环境目录不存在',
-                    snackPosition: SnackPosition.BOTTOM,
-                    duration: const Duration(seconds: 2),
-                  );
-                }
-              } catch (e) {
-                Log.e('删除 Python 虚拟环境失败: $e', tag: 'AstrBot');
-                Get.snackbar(
-                  '操作失败',
-                  '删除虚拟环境失败: $e',
-                  snackPosition: SnackPosition.BOTTOM,
-                  duration: const Duration(seconds: 3),
-                );
-              }
-            }
-          },
-        ),
-        ListTile(
           leading: const Icon(Icons.build),
           title: const Text('覆盖安装插件依赖'),
           subtitle: const Text('下次启动时重新扫描并安装所有插件依赖'),
@@ -1455,6 +1387,74 @@ class _SettingsPageState extends State<SettingsPage> {
                 Get.snackbar(
                   '操作失败',
                   '清除数据失败: $e',
+                  snackPosition: SnackPosition.BOTTOM,
+                  duration: const Duration(seconds: 3),
+                );
+              }
+            }
+          },
+        ),
+        ListTile(
+          leading: const Icon(Icons.refresh),
+          title: const Text('重置 Python 环境'),
+          subtitle: const Text('删除虚拟环境并重启应用，启动时将自动重建'),
+          onTap: () async {
+            // 显示确认对话框
+            final confirmed = await Get.dialog<bool>(
+              AlertDialog(
+                title: const Text('确认重置'),
+                content: const Text(
+                  '此操作将删除 Python 虚拟环境（.venv 目录）并退出应用。\n'
+                  '下次启动时会自动重建环境并安装所有插件依赖。\n\n'
+                  '是否继续？',
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () => Get.back(result: false),
+                    child: const Text('取消'),
+                  ),
+                  TextButton(
+                    onPressed: () => Get.back(result: true),
+                    child: const Text(
+                      '确定',
+                      style: TextStyle(color: Colors.orange),
+                    ),
+                  ),
+                ],
+              ),
+            );
+            if (confirmed == true) {
+              try {
+                final venvPath = '${scripts.ubuntuPath}/root/AstrBot/.venv';
+                final venvDir = Directory(venvPath);
+
+                if (await venvDir.exists()) {
+                  await venvDir.delete(recursive: true);
+                  Log.i('已删除 Python 虚拟环境: $venvPath', tag: 'AstrBot');
+
+                  Get.snackbar(
+                    '重置成功',
+                    'Python 环境已删除，应用即将退出',
+                    snackPosition: SnackPosition.BOTTOM,
+                    duration: const Duration(seconds: 2),
+                  );
+
+                  // 等待提示显示后退出应用
+                  await Future.delayed(const Duration(seconds: 2));
+                  exit(0);
+                } else {
+                  Get.snackbar(
+                    '提示',
+                    '虚拟环境目录不存在',
+                    snackPosition: SnackPosition.BOTTOM,
+                    duration: const Duration(seconds: 2),
+                  );
+                }
+              } catch (e) {
+                Log.e('删除 Python 虚拟环境失败: $e', tag: 'AstrBot');
+                Get.snackbar(
+                  '操作失败',
+                  '删除虚拟环境失败: $e',
                   snackPosition: SnackPosition.BOTTOM,
                   duration: const Duration(seconds: 3),
                 );
