@@ -4,6 +4,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:get/get.dart';
 import 'package:global_repository/global_repository.dart';
 import 'package:settings/settings.dart';
+import 'dart:async';
 
 import 'generated/l10n.dart';
 import 'core/services/foreground_service.dart';
@@ -51,14 +52,41 @@ class AstrBot extends StatefulWidget {
 }
 
 class _AstrBotState extends State<AstrBot> with WidgetsBindingObserver {
+  Timer? _serviceMonitorTimer;
+
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+
+    // 启动服务状态监听器，定期检查服务是否运行
+    _startServiceMonitor();
+  }
+
+  /// 启动服务状态监听器
+  void _startServiceMonitor() {
+    // 每10秒检查一次服务状态
+    _serviceMonitorTimer = Timer.periodic(const Duration(seconds: 10), (timer) async {
+      final isRunning = await ForegroundServiceManager.isRunningService();
+      final userClickedStop = ForegroundServiceManager.userClickedStopButton;
+
+      // 只有在服务未运行且用户没有点击停止按钮的情况下才重启
+      // 这样即使用户从通知栏划掉通知，服务也会被重建
+      if (!isRunning && !userClickedStop) {
+        Log.w('主应用检测到服务未运行，尝试重启...', tag: 'AstrBot');
+        try {
+          await ForegroundServiceManager.startService();
+          Log.i('服务重启成功', tag: 'AstrBot');
+        } catch (e) {
+          Log.e('服务重启失败: $e', tag: 'AstrBot');
+        }
+      }
+    });
   }
 
   @override
   void dispose() {
+    _serviceMonitorTimer?.cancel();
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
