@@ -134,22 +134,11 @@ class KeepAliveTaskHandler extends TaskHandler {
   Future<void> onDestroy(DateTime timestamp, bool isTaskRemoved) async {
     // 服务销毁时调用
     // isTaskRemoved: 用户从最近任务中移除应用（值为true）
-    // 用户从通知栏划掉通知项时，isTaskRemoved 为 false，此时需要重建
-    Log.w('前台服务被销毁，isTaskRemoved: $isTaskRemoved', tag: 'KeepAliveTaskHandler');
-
-    // 只有用户点击了停止按钮才不重建
-    // 其他所有情况都需要重建，包括：
-    // 1. 用户从通知栏划掉通知项
-    // 2. 系统清理内存杀死服务
-    // 3. 其他意外情况导致服务停止
-    if (!ForegroundServiceManager.userClickedStopButton) {
-      Log.i('将在500ms后重建服务（用户划掉通知或系统终止）', tag: 'KeepAliveTaskHandler');
-      // 延迟重启以确保服务完全关闭
-      await Future.delayed(const Duration(milliseconds: 500));
-      await _rebuildService();
-    } else {
-      Log.i('用户点击了停止按钮，不重建服务', tag: 'KeepAliveTaskHandler');
-    }
+    // 注意：不要在这里重建服务，因为：
+    // 1. onNotificationDismissed() 已经处理了用户划掉通知的情况
+    // 2. restartService() 和 startService() 都会触发 onDestroy()
+    // 3. 在这里重建会造成无限循环：重建 → 销毁旧服务 → onDestroy() → 再次重建
+    Log.i('前台服务被销毁，isTaskRemoved: $isTaskRemoved', tag: 'KeepAliveTaskHandler');
   }
 
   /// 重建服务
