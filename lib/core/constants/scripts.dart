@@ -492,7 +492,7 @@ copy_files(){
 
   # 检查旧脚本是否存在并提取版本
   if [ -f "$UBUNTU_PATH/root/astrbot-startup.sh" ]; then
-    EXISTING_VERSION=$(grep -oP 'ASTRBOT_APP_VERSION="\K[^"]+' "$UBUNTU_PATH/root/astrbot-startup.sh" 2>/dev/null)
+    EXISTING_VERSION=$(grep '^ASTRBOT_APP_VERSION=' "$UBUNTU_PATH/root/astrbot-startup.sh" 2>/dev/null | cut -d'"' -f2)
   fi
 
   # 判断是否需要复制
