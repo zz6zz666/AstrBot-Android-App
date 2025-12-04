@@ -284,16 +284,15 @@ install_astrbot(){
     # 原子性重命名
     mv "$CLONE_TEMP_DIR" "$INSTALL_DIR"
 
-    cd "$INSTALL_DIR"
-  
   else
     progress_echo "AstrBot $L_INSTALLED"
   fi
 
   progress_echo "AstrBot 配置中"
+  cd "$INSTALL_DIR"
 
   if [ ! -d "$INSTALL_DIR/data" ]; then
-    cd "$INSTALL_DIR"
+
     echo "检测到 data 目录不存在，初始化数据目录..."
     mkdir "$INSTALL_DIR/data"
     
@@ -333,7 +332,6 @@ install_astrbot(){
   fi
 
   if [ ! -d "$INSTALL_DIR/.venv" ]; then
-    cd "$INSTALL_DIR"
 
     # 使用 uv sync 同步依赖
     echo "同步 AstrBot 依赖..."
@@ -347,7 +345,6 @@ install_astrbot(){
 
   # 检查是否需要重装插件依赖（根据标记）
   if [ "$REINSTALL_PLUGINS_FLAG" -eq 1 ]; then
-    cd "$INSTALL_DIR"
 
     echo "检测到重装插件依赖标记，开始重装..."
     # 清除标记（将脚本中的标记重置为0）
@@ -370,7 +367,7 @@ install_astrbot(){
   fi
 
   # 启动 AstrBot（失败直接退出）
-  cd $INSTALL_DIR
+  cd "$INSTALL_DIR"
   if [ ! -f "$HOME/.local/bin/uv" ]; then
     echo "uv 未找到"
     exit 1
