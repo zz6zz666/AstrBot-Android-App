@@ -280,8 +280,22 @@ install_astrbot(){
         exit 1
       fi
     fi
-    
-    mkdir "$CLONE_TEMP_DIR/data"
+
+    # 原子性重命名
+    mv "$CLONE_TEMP_DIR" "$INSTALL_DIR"
+
+    cd "$INSTALL_DIR"
+  
+  else
+    progress_echo "AstrBot $L_INSTALLED"
+  fi
+
+  progress_echo "AstrBot 配置中"
+
+  if [ ! -d "$INSTALL_DIR/data" ]; then
+    cd "$INSTALL_DIR"
+    echo "检测到 data 目录不存在，初始化数据目录..."
+    mkdir "$INSTALL_DIR/data"
     
     # 检查并恢复最新备份
     if [ -d "$BACKUP_DIR" ]; then
@@ -290,46 +304,32 @@ install_astrbot(){
       
       if [ -n "$LATEST_BACKUP" ]; then
         echo "找到备份文件: $LATEST_BACKUP"
-        progress_echo "恢复 AstrBot 数据备份..."
+        echo "恢复 AstrBot 数据备份..."
         
         # 解压备份到 data 目录
-        if tar -xzf "$LATEST_BACKUP" -C "$CLONE_TEMP_DIR"; then
+        if tar -xzf "$LATEST_BACKUP" -C "$INSTALL_DIR"; then
           echo "备份恢复成功"
-          progress_echo "AstrBot 数据已从备份恢复"
+          echo "AstrBot 数据已从备份恢复"
           REINSTALL_PLUGINS_FLAG=1  # 备份恢复成功，需要重装插件依赖
 
         else
           echo "备份恢复失败，使用默认配置"
-          cp cmd_config.json "$CLONE_TEMP_DIR/data"
-          chmod +w "$CLONE_TEMP_DIR/data/cmd_config.json"
+          cp cmd_config.json "$INSTALL_DIR/data"
+          chmod +w "$INSTALL_DIR/data/cmd_config.json"
         fi
       else
         echo "未找到备份文件，使用默认配置"
-        cp cmd_config.json "$CLONE_TEMP_DIR/data"
-        chmod +w "$CLONE_TEMP_DIR/data/cmd_config.json"
+        cp cmd_config.json "$INSTALL_DIR/data"
+        chmod +w "$INSTALL_DIR/data/cmd_config.json"
         echo "拷贝 cmd_config.json 默认配置文件"
       fi
     else
       echo "备份目录不存在，使用默认配置"
-      cp cmd_config.json "$CLONE_TEMP_DIR/data"
-      chmod +w "$CLONE_TEMP_DIR/data/cmd_config.json"
+      cp cmd_config.json "$INSTALL_DIR/data"
+      chmod +w "$INSTALL_DIR/data/cmd_config.json"
       echo "拷贝 cmd_config.json 默认配置文件"
     fi
-
-    # 原子性重命名
-    mv "$CLONE_TEMP_DIR" "$INSTALL_DIR"
-
-    cd "$INSTALL_DIR"
     
-    # 使用 uv sync 同步依赖
-    echo "同步 AstrBot 依赖..."
-    if ! $HOME/.local/bin/uv sync; then
-      echo "依赖同步失败"
-      exit 1
-    fi
-  
-  else
-    progress_echo "AstrBot $L_INSTALLED"
   fi
 
   if [ ! -d "$INSTALL_DIR/.venv" ]; then
@@ -370,7 +370,6 @@ install_astrbot(){
   fi
 
   # 启动 AstrBot（失败直接退出）
-  progress_echo "AstrBot 配置中"
   cd $INSTALL_DIR
   if [ ! -f "$HOME/.local/bin/uv" ]; then
     echo "uv 未找到"

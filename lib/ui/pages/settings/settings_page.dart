@@ -1219,7 +1219,10 @@ class _SettingsPageState extends State<SettingsPage> {
                   ),
                   TextButton(
                     onPressed: () => Get.back(result: true),
-                    child: const Text('确认'),
+                    child: const Text(
+                      '确定',
+                      style: TextStyle(color: Colors.orange),
+                    ),
                   ),
                 ],
               ),
@@ -1317,6 +1320,75 @@ class _SettingsPageState extends State<SettingsPage> {
           subtitle: const Text('备份 AstrBot 配置和数据到手机存储'),
           onTap: () async {
             await _performBackup(showLoadingDialog: true);
+          },
+        ),
+        ListTile(
+          leading: const Icon(Icons.delete_forever),
+          title: const Text('清除 AstrBot 数据'),
+          subtitle: const Text('清除 AstrBot 配置和数据，\n重启时自动从备份恢复或重新初始化'),
+          onTap: () async {
+            // 显示确认对话框
+            final confirmed = await Get.dialog<bool>(
+              AlertDialog(
+                title: const Text('确认清除数据'),
+                content: const Text(
+                  '此操作将删除所有 AstrBot 数据和配置，\n'
+                  '重启后将自动从备份恢复或重新初始化。\n\n'
+                  '是否继续？',
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () => Get.back(result: false),
+                    child: const Text('取消'),
+                  ),
+                  TextButton(
+                    onPressed: () => Get.back(result: true),
+                    child: const Text(
+                      '确定',
+                      style: TextStyle(color: Colors.orange),
+                    ),
+                  ),
+                ],
+              ),
+            );
+
+            if (confirmed == true) {
+              try {
+                final dataPath = '${scripts.ubuntuPath}/root/AstrBot/data';
+                final dataDir = Directory(dataPath);
+
+                if (await dataDir.exists()) {
+                  await dataDir.delete(recursive: true);
+                  Log.i('已清除 AstrBot 数据目录: $dataPath', tag: 'AstrBot');
+
+                  Get.snackbar(
+                    '清除成功',
+                    'AstrBot 数据已清除，应用即将退出',
+                    snackPosition: SnackPosition.BOTTOM,
+                    duration: const Duration(seconds: 2),
+                  );
+
+                  // 等待提示显示后退出应用
+                  await Future.delayed(const Duration(seconds: 2));
+                  exit(0);
+                } else {
+                  Get.snackbar(
+                    '提示',
+                    '数据目录不存在，无需清除',
+                    snackPosition: SnackPosition.BOTTOM,
+                    duration: const Duration(seconds: 2),
+                  );
+                }
+              } catch (e) {
+                Log.e('清除 AstrBot 数据失败: $e', tag: 'AstrBot');
+                Get.snackbar(
+                  '操作失败',
+                  '清除数据失败: $e',
+                  snackPosition: SnackPosition.BOTTOM,
+                  duration: const Duration(seconds: 3),
+                );
+              }
+            }
           },
         ),
         ListTile(
