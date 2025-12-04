@@ -142,11 +142,6 @@ class HomeController extends GetxController {
         }
       }
 
-      if (event.contains('Napcat ${S.current.installed}')) {
-        napcatTerminal?.writeString('$command\n');
-        bumpProgress();
-      }
-
       // 检查是否包含 localhost:6185
       if (event.contains('http://localhost:6185')) {
         _isLocalhostDetected = true;
@@ -377,6 +372,13 @@ class HomeController extends GetxController {
       if (event.type == FileSystemEvent.modify) {
         String content = await progressDesFile.readAsString();
         currentProgress = content;
+
+        // 当进度到达 "Napcat 已安装" 时，启动 NapCat 终端
+        if (content.contains('Napcat') && content.contains(S.current.installed)) {
+          napcatTerminal?.writeString('$command\n');
+          bumpProgress();
+          Log.i('检测到 Napcat 已安装，启动 NapCat 终端', tag: 'AstrBot');
+        }
 
         // 当进度到达 "AstrBot 配置中" 时，开始过滤非彩色输出
         if (content.trim() == 'AstrBot 配置中') {
