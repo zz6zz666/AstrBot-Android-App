@@ -517,7 +517,7 @@ copy_files(){
       echo "启动脚本版本不一致(现有: $EXISTING_VERSION, 当前: $CURRENT_VERSION)，已更新启动脚本"
     fi
   else
-    echo "启动脚本版本一致($CURRENT_VERSION)，无需更新"
+    echo -e "\033[32m启动脚本版本一致($CURRENT_VERSION)，无需更新\033[0m"
   fi
 
   # cmd_config.json 每次都复制（保持原有逻辑）

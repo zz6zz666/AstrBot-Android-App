@@ -290,7 +290,7 @@ install_astrbot(){
     progress_echo "AstrBot $L_INSTALLED"
   fi
 
-  progress_echo "AstrBot 配置中"
+  progress_echo "AstrBot 初始化中"
   cd "$INSTALL_DIR"
 
   if [ ! -d "$INSTALL_DIR/data" ]; then
@@ -378,7 +378,8 @@ install_astrbot(){
   fi
 
   # 使用 uv run --no-sync main.py 启动（跳过依赖同步）
-    echo "启动 AstrBot..."
+  progress_echo "AstrBot 配置中"
+
   if ! $HOME/.local/bin/uv run --no-sync main.py; then
     echo "AstrBot 启动失败"
     exit 1

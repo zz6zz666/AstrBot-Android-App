@@ -43,6 +43,7 @@ class HomeController extends GetxController {
   bool _isLocalhostDetected = false; // localhost:6185 检测标志
   bool _isQrcodeProcessed = false; // 二维码处理完成标志
   bool _isAppInForeground = true; // 应用是否在前台
+  bool _isAstrBotConfiguring = false; // AstrBot 配置中标志，用于控制终端输出过滤
 
   File progressFile = File('${RuntimeEnvir.tmpPath}/progress');
   File progressDesFile = File('${RuntimeEnvir.tmpPath}/progress_des');
@@ -74,6 +75,39 @@ class HomeController extends GetxController {
   // Use login_ubuntu function, passing the command to execute
   String get command {
     return 'source ${RuntimeEnvir.homePath}/common.sh\nlogin_ubuntu "bash /root/launcher.sh"\n';
+  }
+
+  // 检测文本是否包含彩色 ANSI 代码(非白色/默认色)
+  // Check if text contains colored ANSI codes (non-white/default)
+  bool _hasColoredAnsiCode(String text) {
+    // ANSI 彩色代码正则: \x1b[...m 或 \033[...m
+    // 匹配所有颜色代码，排除白色(37)和重置代码(0)
+    final ansiColorRegex = RegExp(
+      r'\x1b\[([0-9;]+)m|\033\[([0-9;]+)m',
+      multiLine: true,
+    );
+
+    final matches = ansiColorRegex.allMatches(text);
+    for (var match in matches) {
+      final code = match.group(1) ?? match.group(2) ?? '';
+      // 检查是否包含颜色代码
+      // 30-37: 前景色, 40-47: 背景色, 90-97: 高亮前景色, 100-107: 高亮背景色
+      // 排除: 0(重置), 37(白色), 97(高亮白色)
+      final codes = code.split(';');
+      for (var c in codes) {
+        final colorCode = int.tryParse(c.trim());
+        if (colorCode != null) {
+          // 有效的颜色代码(非白色且非重置)
+          if ((colorCode >= 30 && colorCode <= 36) ||  // 前景色(黑到青)
+              (colorCode >= 40 && colorCode <= 47) ||  // 背景色
+              (colorCode >= 90 && colorCode <= 96) ||  // 高亮前景色(非白)
+              (colorCode >= 100 && colorCode <= 107)) { // 高亮背景色
+            return true;
+          }
+        }
+      }
+    }
+    return false;
   }
 
   // 检查两个条件是否都满足，如果满足则触发跳转
@@ -127,7 +161,18 @@ class HomeController extends GetxController {
 
         // 不取消订阅，继续监听以便终端日志持续更新
       }
-      terminal.write(event);
+
+      // 只在 AstrBot 配置阶段才过滤非彩色输出
+      // Only filter non-colored output after AstrBot configuration starts
+      if (_isAstrBotConfiguring) {
+        // 只显示包含彩色 ANSI 代码的输出到终端
+        if (_hasColoredAnsiCode(event)) {
+          terminal.write(event);
+        }
+      } else {
+        // 配置前显示所有输出
+        terminal.write(event);
+      }
     });
   }
 
@@ -332,6 +377,13 @@ class HomeController extends GetxController {
       if (event.type == FileSystemEvent.modify) {
         String content = await progressDesFile.readAsString();
         currentProgress = content;
+
+        // 当进度到达 "AstrBot 配置中" 时，开始过滤非彩色输出
+        if (content.trim() == 'AstrBot 配置中') {
+          _isAstrBotConfiguring = true;
+          Log.i('检测到 AstrBot 配置中，开始过滤非彩色终端输出', tag: 'AstrBot');
+        }
+
         update();
       }
     });
