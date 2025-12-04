@@ -110,6 +110,9 @@ class KeepAliveTaskHandler extends TaskHandler {
   /// 服务重建计数器
   int _rebuildCount = 0;
 
+  /// 标记是否是用户主动划掉通知（用于区分系统自动清理）
+  static bool _userDismissedNotification = false;
+
   @override
   Future<void> onStart(DateTime timestamp, TaskStarter starter) async {
     // 服务启动时调用
@@ -134,11 +137,22 @@ class KeepAliveTaskHandler extends TaskHandler {
   Future<void> onDestroy(DateTime timestamp, bool isTaskRemoved) async {
     // 服务销毁时调用
     // isTaskRemoved: 用户从最近任务中移除应用（值为true）
-    // 注意：不要在这里重建服务，因为：
-    // 1. onNotificationDismissed() 已经处理了用户划掉通知的情况
-    // 2. restartService() 和 startService() 都会触发 onDestroy()
-    // 3. 在这里重建会造成无限循环：重建 → 销毁旧服务 → onDestroy() → 再次重建
-    Log.i('前台服务被销毁，isTaskRemoved: $isTaskRemoved', tag: 'KeepAliveTaskHandler');
+    Log.i('前台服务被销毁，isTaskRemoved: $isTaskRemoved, 用户主动划掉: $_userDismissedNotification', tag: 'KeepAliveTaskHandler');
+
+    // 重建场景判断：
+    // 1. 如果是用户主动划掉通知：onNotificationDismissed() 已处理，这里不处理
+    // 2. 如果是系统自动清理通知（如充电完成等）：onNotificationDismissed() 不会被调用，需要在这里重建
+    // 3. 如果是用户点击停止按钮：不重建
+
+    if (!_userDismissedNotification && !ForegroundServiceManager.userClickedStopButton) {
+      Log.w('检测到系统自动清理通知或服务被终止，准备重建...', tag: 'KeepAliveTaskHandler');
+      // 延迟重建以确保服务完全关闭
+      await Future.delayed(const Duration(milliseconds: 500));
+      await _rebuildService();
+    }
+
+    // 重置用户划掉标记
+    _userDismissedNotification = false;
   }
 
   /// 重建服务
@@ -190,13 +204,16 @@ class KeepAliveTaskHandler extends TaskHandler {
 
   @override
   void onNotificationDismissed() {
-    // 用户从通知栏划掉通知时调用
-    Log.w('用户划掉通知，准备重建服务...', tag: 'KeepAliveTaskHandler');
+    // 用户从通知栏主动划掉通知时调用
+    Log.w('用户主动划掉通知，准备重建服务...', tag: 'KeepAliveTaskHandler');
+
+    // 标记为用户主动划掉，避免 onDestroy() 中重复处理
+    _userDismissedNotification = true;
 
     // 只有用户点击了停止按钮才不重建
     // 划掉通知应该重建服务
     if (!ForegroundServiceManager.userClickedStopButton) {
-      Log.i('检测到通知被划掉，将重建服务', tag: 'KeepAliveTaskHandler');
+      Log.i('检测到用户主动划掉通知，将重建服务', tag: 'KeepAliveTaskHandler');
       // 延迟一小段时间后重建服务
       Future.delayed(const Duration(milliseconds: 500), () {
         _rebuildService();
