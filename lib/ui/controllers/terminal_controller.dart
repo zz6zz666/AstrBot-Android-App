@@ -24,7 +24,8 @@ class HomeController extends GetxController {
   final RxString napCatWebUiToken = ''.obs; // 存储 NapCat WebUI Token
   final RxBool _isQrcodeShowing = false.obs;
   final RxBool napCatWebUiEnabledRx = false.obs; // GetX 响应式变量用于导航栏更新
-  final RxList<Map<String, String>> customWebViews = <Map<String, String>>[].obs; // 自定义 WebView 列表
+  final RxList<Map<String, String>> customWebViews =
+      <Map<String, String>>[].obs; // 自定义 WebView 列表
   Dialog? _qrcodeDialog;
   StreamSubscription? _qrcodeSubscription;
   StreamSubscription? _webviewSubscription; // 添加webview监听订阅
@@ -39,7 +40,8 @@ class HomeController extends GetxController {
     },
   );
   bool webviewHasOpen = false;
-  bool _isAdapterConnected = false; // 适配器连接标志
+  bool _isLocalhostDetected = false; // localhost:6185 检测标志
+  bool _isQrcodeProcessed = false; // 二维码处理完成标志
   bool _isAppInForeground = true; // 应用是否在前台
 
   File progressFile = File('${RuntimeEnvir.tmpPath}/progress');
@@ -74,12 +76,26 @@ class HomeController extends GetxController {
     return 'source ${RuntimeEnvir.homePath}/common.sh\nlogin_ubuntu "bash /root/launcher.sh"\n';
   }
 
-  // 监听输出，当输出中包含启动成功的标志时，启动 Code Server
-  // Listen for output and start the Code Server when the success flag is detected
+  // 检查两个条件是否都满足，如果满足则触发跳转
+  void _checkAndNavigateToWebview() {
+    // 只有当两个条件都满足且应用在前台时才跳转
+    if (_isLocalhostDetected && _isQrcodeProcessed && _isAppInForeground && !webviewHasOpen) {
+      Future.microtask(() {
+        // 使用路由跳转
+        Get.toNamed(AppRoutes.webview);
+        webviewHasOpen = true; // 只有真正打开webview时才设置为true
+      });
+    }
+  }
+
+  // 监听输出，当输出中包含启动成功的标志时，启动 VewView 和导航栏页面
   void initWebviewListener() {
     if (pseudoTerminal == null) return;
 
-    _webviewSubscription = pseudoTerminal!.output.cast<List<int>>().transform(const Utf8Decoder(allowMalformed: true)).listen((event) async {
+    _webviewSubscription = pseudoTerminal!.output
+        .cast<List<int>>()
+        .transform(const Utf8Decoder(allowMalformed: true))
+        .listen((event) async {
       // 输出到 Flutter 控制台
       // Output to Flutter console
       if (event.trim().isNotEmpty) {
@@ -97,19 +113,13 @@ class HomeController extends GetxController {
         bumpProgress();
       }
 
-      // 检查是否包含适配器连接成功的标志
-      if (event.contains('适配器已连接')) {
-        _isAdapterConnected = true;
+      // 检查是否包含 localhost:6185
+      if (event.contains('http://localhost:6185')) {
+        _isLocalhostDetected = true;
         bumpProgress();
 
-        // 如果应用当前在前台，则立即打开webview
-        if (_isAppInForeground) {
-          Future.microtask(() {
-            // 使用路由跳转
-            Get.toNamed(AppRoutes.webview);
-            webviewHasOpen = true; // 只有真正打开webview时才设置为true
-          });
-        }
+        // 检查是否两个条件都满足
+        _checkAndNavigateToWebview();
 
         Future.delayed(const Duration(milliseconds: 2000), () {
           update();
@@ -124,7 +134,10 @@ class HomeController extends GetxController {
   void initQrcodeListener() {
     if (napcatTerminal == null) return;
 
-    _qrcodeSubscription = napcatTerminal!.output.cast<List<int>>().transform(const Utf8Decoder(allowMalformed: true)).listen((event) async {
+    _qrcodeSubscription = napcatTerminal!.output
+        .cast<List<int>>()
+        .transform(const Utf8Decoder(allowMalformed: true))
+        .listen((event) async {
       // 先判断订阅是否已取消，避免重复处理
       if (_qrcodeSubscription == null) return;
 
@@ -208,6 +221,12 @@ class HomeController extends GetxController {
           _qrcodeDialog = null;
         }
 
+        // 标记二维码处理完成
+        _isQrcodeProcessed = true;
+
+        // 检查是否两个条件都满足
+        _checkAndNavigateToWebview();
+
         // 取消订阅，后续不再监听任何指令
         await _qrcodeSubscription?.cancel();
         _qrcodeSubscription = null; // 置空标记已取消
@@ -249,7 +268,14 @@ class HomeController extends GetxController {
   // 初始化环境，将动态库中的文件链接到数据目录
   // Init environment and link files from the dynamic library to the data directory
   Future<void> initEnvir() async {
-    List<String> androidFiles = ['libbash.so', 'libbusybox.so', 'liblibtalloc.so.2.so', 'libloader.so', 'libproot.so', 'libsudo.so'];
+    List<String> androidFiles = [
+      'libbash.so',
+      'libbusybox.so',
+      'liblibtalloc.so.2.so',
+      'libloader.so',
+      'libproot.so',
+      'libsudo.so'
+    ];
     String libPath = await getLibPath();
     Log.i('libPath -> $libPath');
 
@@ -264,7 +290,8 @@ class HomeController extends GetxController {
       File file = File(filePath);
       FileSystemEntityType type = await FileSystemEntity.type(filePath);
       Log.i('$fileName type -> $type');
-      if (type != FileSystemEntityType.notFound && type != FileSystemEntityType.link) {
+      if (type != FileSystemEntityType.notFound &&
+          type != FileSystemEntityType.link) {
         // old version adb is plain file
         Log.i('find plain file -> $fileName, delete it');
         await file.delete();
@@ -315,8 +342,40 @@ class HomeController extends GetxController {
   void createBusyboxLink() {
     try {
       List<String> links = [
-        ...['awk', 'ash', 'basename', 'bzip2', 'curl', 'cp', 'chmod', 'cut', 'cat', 'du', 'dd', 'find', 'grep', 'gzip'],
-        ...['hexdump', 'head', 'id', 'lscpu', 'mkdir', 'realpath', 'rm', 'sed', 'stat', 'sh', 'tr', 'tar', 'uname', 'xargs', 'xz', 'xxd']
+        ...[
+          'awk',
+          'ash',
+          'basename',
+          'bzip2',
+          'curl',
+          'cp',
+          'chmod',
+          'cut',
+          'cat',
+          'du',
+          'dd',
+          'find',
+          'grep',
+          'gzip'
+        ],
+        ...[
+          'hexdump',
+          'head',
+          'id',
+          'lscpu',
+          'mkdir',
+          'realpath',
+          'rm',
+          'sed',
+          'stat',
+          'sh',
+          'tr',
+          'tar',
+          'uname',
+          'xargs',
+          'xz',
+          'xxd'
+        ]
       ];
 
       for (String linkName in links) {
@@ -349,14 +408,18 @@ class HomeController extends GetxController {
     createBusyboxLink();
 
     // 创建终端
-    pseudoTerminal = createPTY(rows: terminal.viewHeight, columns: terminal.viewWidth);
+    pseudoTerminal =
+        createPTY(rows: terminal.viewHeight, columns: terminal.viewWidth);
     napcatTerminal = createPTY();
 
     // 复制必要的文件
     setProgress('复制 Ubuntu 系统镜像...');
-    await AssetsUtils.copyAssetToPath('assets/${Config.ubuntuFileName}', '${RuntimeEnvir.homePath}/${Config.ubuntuFileName}');
-    await AssetsUtils.copyAssetToPath('assets/astrbot-startup.sh', '${RuntimeEnvir.homePath}/astrbot-startup.sh');
-    await AssetsUtils.copyAssetToPath('assets/cmd_config.json', '${RuntimeEnvir.homePath}/cmd_config.json');
+    await AssetsUtils.copyAssetToPath('assets/${Config.ubuntuFileName}',
+        '${RuntimeEnvir.homePath}/${Config.ubuntuFileName}');
+    await AssetsUtils.copyAssetToPath('assets/astrbot-startup.sh',
+        '${RuntimeEnvir.homePath}/astrbot-startup.sh');
+    await AssetsUtils.copyAssetToPath(
+        'assets/cmd_config.json', '${RuntimeEnvir.homePath}/cmd_config.json');
     bumpProgress();
 
     // 写入并执行脚本
@@ -373,7 +436,8 @@ class HomeController extends GetxController {
 
   Future<void> startAstrBot(Pty pseudoTerminal) async {
     setProgress('开始安装 AstrBot...');
-    pseudoTerminal.writeString('source ${RuntimeEnvir.homePath}/common.sh\nstart_astrbot\n');
+    pseudoTerminal.writeString(
+        'source ${RuntimeEnvir.homePath}/common.sh\nstart_astrbot\n');
   }
 
   @override
@@ -407,8 +471,8 @@ class HomeController extends GetxController {
       LifecycleObserver(
         onResume: () {
           _isAppInForeground = true;
-          // 当应用回到前台且适配器已连接但webview未打开时，打开webview
-          if (_isAdapterConnected && !webviewHasOpen) {
+          // 当应用回到前台且两个条件都满足但webview未打开时，打开webview
+          if (_isLocalhostDetected && _isQrcodeProcessed && !webviewHasOpen) {
             Future.microtask(() {
               Get.toNamed(AppRoutes.webview);
               webviewHasOpen = true;
@@ -478,7 +542,7 @@ class HomeController extends GetxController {
     _webviewSubscription?.cancel();
     _qrcodeSubscription = null;
     _webviewSubscription = null;
-    
+
     // 杀死所有终端进程，释放端口
     try {
       if (pseudoTerminal != null) {
@@ -494,7 +558,7 @@ class HomeController extends GetxController {
     } catch (e) {
       Log.e('关闭终端进程时出错: $e', tag: 'AstrBot');
     }
-    
+
     // 移除生命周期观察者
     WidgetsBinding.instance.removeObserver(
       LifecycleObserver(
@@ -510,9 +574,9 @@ class HomeController extends GetxController {
 class LifecycleObserver extends WidgetsBindingObserver {
   final VoidCallback onResume;
   final VoidCallback onPause;
-  
+
   LifecycleObserver({required this.onResume, required this.onPause});
-  
+
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     super.didChangeAppLifecycleState(state);

@@ -29,12 +29,14 @@ class SettingsPage extends StatefulWidget {
 
 class _SettingsPageState extends State<SettingsPage> {
   String _appVersion = '';
+  bool _isBatteryOptimizationIgnored = false;
   final HomeController homeController = Get.find<HomeController>();
 
   @override
   void initState() {
     super.initState();
     _loadAppVersion();
+    _checkBatteryOptimizationStatus();
   }
 
   Future<void> _loadAppVersion() async {
@@ -42,6 +44,74 @@ class _SettingsPageState extends State<SettingsPage> {
     setState(() {
       _appVersion = packageInfo.version;
     });
+  }
+
+  // 检查电池优化豁免状态
+  Future<void> _checkBatteryOptimizationStatus() async {
+    if (!Platform.isAndroid) return;
+
+    try {
+      final status = await Permission.ignoreBatteryOptimizations.status;
+      setState(() {
+        _isBatteryOptimizationIgnored = status.isGranted;
+      });
+    } catch (e) {
+      Log.e('检查电池优化豁免状态失败: $e', tag: 'AstrBot');
+    }
+  }
+
+  // 请求电池优化豁免
+  Future<void> _requestBatteryOptimization() async {
+    if (!Platform.isAndroid) return;
+
+    try {
+      final status = await Permission.ignoreBatteryOptimizations.status;
+
+      if (status.isGranted) {
+        Get.snackbar(
+          '已授权',
+          '已获得电池优化豁免权限',
+          snackPosition: SnackPosition.BOTTOM,
+          duration: const Duration(seconds: 2),
+        );
+        return;
+      }
+
+      // 请求权限
+      final result = await Permission.ignoreBatteryOptimizations.request();
+
+      // 等待对话框关闭后重新检查状态
+      await Future.delayed(const Duration(milliseconds: 500));
+      await _checkBatteryOptimizationStatus();
+
+      if (result.isGranted) {
+        Get.snackbar(
+          '授权成功',
+          '已获得电池优化豁免权限',
+          snackPosition: SnackPosition.BOTTOM,
+          duration: const Duration(seconds: 2),
+        );
+      } else {
+        Get.snackbar(
+          '授权失败',
+          '未获得电池优化豁免权限',
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: Colors.orange,
+          colorText: Colors.white,
+          duration: const Duration(seconds: 2),
+        );
+      }
+    } catch (e) {
+      Log.e('请求电池优化豁免失败: $e', tag: 'AstrBot');
+      Get.snackbar(
+        '请求失败',
+        '请求电池优化豁免时发生错误: $e',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+        duration: const Duration(seconds: 3),
+      );
+    }
   }
 
   // 检查更新
@@ -1476,6 +1546,15 @@ class _SettingsPageState extends State<SettingsPage> {
               color: Colors.grey,
             ),
           ),
+        ),
+        ListTile(
+          leading: const Icon(Icons.battery_saver),
+          title: const Text('电池优化豁免'),
+          subtitle: Text(_isBatteryOptimizationIgnored ? '已授权' : '未授权（点击授权）'),
+          trailing: _isBatteryOptimizationIgnored
+              ? const Icon(Icons.check_circle, color: Colors.green)
+              : const Icon(Icons.warning, color: Colors.orange),
+          onTap: () => _requestBatteryOptimization(),
         ),
         ListTile(
           leading: const Icon(Icons.web),
