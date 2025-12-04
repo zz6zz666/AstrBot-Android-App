@@ -51,7 +51,7 @@ install_sudo_curl_git(){
   fi
 }
 
-function network_test() {
+network_test() {
     local timeout=10
     local status=0
     local found=0
@@ -66,7 +66,7 @@ function network_test() {
         status=$(curl -k -L --connect-timeout ${timeout} --max-time $((timeout*2)) -o /dev/null -s -w "%{http_code}" "${proxy}/${check_url}")
         curl_exit=$?
         if [ $curl_exit -ne 0 ]; then
-            echo "代理 ${proxy} 测试失败或超时 (错误码: $curl_exit)"
+            echo "代理 ${proxy} 测试失败或超时，错误码: $curl_exit"
             continue
         fi
         if [ "${status}" = "200" ]; then
@@ -275,7 +275,7 @@ install_astrbot(){
       fi
 
       # 克隆到临时目录
-      echo "正在克隆 AstrBot 仓库 (分支/标签: $CLONE_BRANCH)..."
+      echo "正在克隆 AstrBot 仓库，分支/标签: $CLONE_BRANCH..."
       if ! git clone --depth=1 --branch "$CLONE_BRANCH" ${target_proxy:+${target_proxy}/}https://github.com/AstrBotDevs/AstrBot.git "$CLONE_TEMP_DIR"; then
         echo "克隆 AstrBot 仓库失败"
         rm -rf "$CLONE_TEMP_DIR"  # 清理失败的临时目录
@@ -332,7 +332,7 @@ install_astrbot(){
     fi
     
     rm -rf "$INSTALL_DIR/.venv"
-    
+
   fi
 
   if [ ! -d "$INSTALL_DIR/.venv" ]; then

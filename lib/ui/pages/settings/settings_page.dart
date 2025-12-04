@@ -426,7 +426,7 @@ class _SettingsPageState extends State<SettingsPage> {
               controller: urlController,
               decoration: const InputDecoration(
                 labelText: 'URL',
-                helperText: '自动添加前缀 http://127.0.0.1: 若需使用https,请手动输入完整URL',
+                helperText: '自动添加前缀 http://127.0.0.1: \n若需使用https,请手动输入完整URL',
                 border: OutlineInputBorder(),
               ),
               keyboardType: TextInputType.url,
@@ -1227,7 +1227,6 @@ class _SettingsPageState extends State<SettingsPage> {
                 ],
               ),
             );
-
             if (confirmed == true) {
               try {
                 final venvPath = '${scripts.ubuntuPath}/root/AstrBot/.venv';
@@ -1426,7 +1425,7 @@ class _SettingsPageState extends State<SettingsPage> {
               padding: EdgeInsets.all(16.0),
               child: Center(
                 child: Text(
-                  '用于添加插件WebUI地址\n点击右上角"+"添加',
+                  '访问插件的 WebUI 面板\n点击右上角"+"添加',
                   style: TextStyle(color: Colors.grey),
                   textAlign: TextAlign.center,
                 ),
