@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:global_repository/global_repository.dart';
 import 'package:xterm/xterm.dart';
 
 import '../../controllers/terminal_controller.dart';
@@ -176,8 +175,7 @@ class _TerminalTabViewState extends State<TerminalTabView> {
 
   /// 构建终端内容
   Widget _buildTerminalContent(TerminalTab tab) {
-    return Padding(
-      padding: EdgeInsets.all(8.w),
+    return ClipRect(
       child: TerminalView(
         tab.terminal,
         readOnly: tab.type == TerminalTabType.fixed, // 固定终端只读

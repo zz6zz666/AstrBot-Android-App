@@ -85,15 +85,51 @@ class TerminalTabManager extends GetxController {
       };
 
       // 监听PTY输出并写入终端
+      // 使用StringBuffer累积输出，直到检测到提示符
+      final outputBuffer = StringBuffer();
+      var loginCompleted = false;
+
       newPty.output
           .cast<List<int>>()
           .transform(const Utf8Decoder(allowMalformed: true))
           .listen((event) {
+        // 如果登录还未完成
+        if (!loginCompleted) {
+          outputBuffer.write(event);
+          final fullOutput = outputBuffer.toString();
+
+          // 检测是否包含 root@localhost 提示符，表示登录完成
+          if (fullOutput.contains('root@localhost')) {
+            loginCompleted = true;
+
+            // 提取提示符及其后的内容（从最后一个换行符开始）
+            final lines = fullOutput.split('\n');
+            String promptLine = '';
+
+            // 从后往前找到包含 root@localhost 的行
+            for (int i = lines.length - 1; i >= 0; i--) {
+              if (lines[i].contains('root@localhost')) {
+                promptLine = lines[i];
+                break;
+              }
+            }
+
+            // 清空终端并只显示提示符
+            newTerminal.buffer.clear();
+            newTerminal.buffer.setCursor(0, 0);
+            if (promptLine.isNotEmpty) {
+              newTerminal.write('$promptLine\r\n');
+            }
+          }
+          return;
+        }
+
+        // 登录完成后，正常输出所有内容
         newTerminal.write(event);
       });
 
-      // 登录到ubuntu容器
-      final command = 'source ${RuntimeEnvir.homePath}/common.sh\nlogin_ubuntu "bash"\n';
+      // 登录到ubuntu容器，将stderr重定向到/dev/null以隐藏groups错误
+      final command = 'source ${RuntimeEnvir.homePath}/common.sh\nlogin_ubuntu "bash" 2>/dev/null\n';
       newPty.writeString(command);
 
       // 创建新标签页
