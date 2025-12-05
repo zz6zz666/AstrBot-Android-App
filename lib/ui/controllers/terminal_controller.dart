@@ -608,8 +608,20 @@ class HomeController extends GetxController {
         'assets/cmd_config.json', '${RuntimeEnvir.homePath}/cmd_config.json');
     bumpProgress();
 
-    // 写入并执行脚本
-    File('${RuntimeEnvir.homePath}/common.sh').writeAsStringSync(commonScript);
+    // 获取当前应用版本号
+    final appVersion = await getAppVersion();
+
+    // 替换 astrbot-startup.sh 中的版本号占位符
+    final startupScriptFile = File('${RuntimeEnvir.homePath}/astrbot-startup.sh');
+    if (await startupScriptFile.exists()) {
+      String scriptContent = await startupScriptFile.readAsString();
+      scriptContent = scriptContent.replaceAll('{{VERSION}}', appVersion);
+      await startupScriptFile.writeAsString(scriptContent);
+    }
+
+    // 写入 common.sh 脚本
+    File('${RuntimeEnvir.homePath}/common.sh')
+        .writeAsStringSync(getCommonScript(appVersion));
 
     initWebviewListener();
     bumpProgress();

@@ -1,6 +1,6 @@
 #!/bin/bash
 
-ASTRBOT_APP_VERSION="1.5.1"
+ASTRBOT_APP_VERSION="{{VERSION}}"
 
 # 自定义 Git Clone 命令（为空时使用默认逻辑）
 CUSTOM_GIT_CLONE=""

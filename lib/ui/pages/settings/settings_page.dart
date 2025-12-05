@@ -12,6 +12,7 @@ import 'package:flutter_markdown/flutter_markdown.dart';
 import '../../controllers/terminal_controller.dart';
 import '../../../core/constants/scripts.dart' as scripts;
 import '../../../core/services/password_manager.dart';
+import '../../../core/config/app_config.dart';
 
 class SettingsPage extends StatefulWidget {
   final WebViewController astrBotController;
@@ -137,11 +138,8 @@ class _SettingsPageState extends State<SettingsPage> {
 
       // 使用镜像源获取最新版本信息
       final mirrors = [
-        'https://ghfast.top/https://api.github.com/repos/zz6zz666/AstrBot-Android-App/releases/latest',
-        'https://gh-proxy.com/https://api.github.com/repos/zz6zz666/AstrBot-Android-App/releases/latest',
-        'https://mirror.ghproxy.com/https://api.github.com/repos/zz6zz666/AstrBot-Android-App/releases/latest',
-        'https://hub.gitmirror.com/https://api.github.com/repos/zz6zz666/AstrBot-Android-App/releases/latest',
-        'https://api.github.com/repos/zz6zz666/AstrBot-Android-App/releases/latest',
+        ...Config.githubApiMirrors.map((mirror) => '$mirror/${Config.githubApi}${Config.githubReleasesPath}'),
+        '${Config.githubApi}${Config.githubReleasesPath}',
       ];
 
       Map<String, dynamic>? releaseData;
@@ -339,31 +337,16 @@ class _SettingsPageState extends State<SettingsPage> {
 
       // 直接构造GitHub原始下载链接，避免使用可能被镜像站污染的URL
       _originalDownloadUrl =
-          'https://github.com/zz6zz666/AstrBot-Android-App/releases/download/$tagName/$apkFileName';
+          '${Config.githubDownloadBase}/$tagName/$apkFileName';
     }
 
     // 使用原始URL构建各个镜像源的下载链接
     final sources = [
-      {
-        'name': 'Ghfast镜像下载',
-        'icon': Icons.speed,
-        'url': 'https://ghfast.top/$_originalDownloadUrl',
-      },
-      {
-        'name': 'GHProxy镜像下载',
-        'icon': Icons.speed,
-        'url': 'https://gh-proxy.com/$_originalDownloadUrl',
-      },
-      {
-        'name': 'Mirror GHProxy镜像下载',
-        'icon': Icons.speed,
-        'url': 'https://mirror.ghproxy.com/$_originalDownloadUrl',
-      },
-      {
-        'name': 'Hub Gitmirror镜像下载',
-        'icon': Icons.speed,
-        'url': 'https://hub.gitmirror.com/$_originalDownloadUrl',
-      },
+      ...Config.downloadMirrors.map((mirror) => {
+        'name': mirror['name']!,
+        'icon': mirror['icon'] == 'speed' ? Icons.speed : Icons.cloud_download,
+        'url': '${mirror['url']}/$_originalDownloadUrl',
+      }),
       {
         'name': 'GitHub原始链接',
         'icon': Icons.cloud_download,

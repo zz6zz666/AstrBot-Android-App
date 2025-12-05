@@ -1,6 +1,14 @@
 import 'package:global_repository/global_repository.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import '../config/app_config.dart';
 import '../../generated/l10n.dart';
+
+// 获取应用版本号（从 pubspec.yaml）
+// Get app version from pubspec.yaml
+Future<String> getAppVersion() async {
+  final packageInfo = await PackageInfo.fromPlatform();
+  return packageInfo.version;
+}
 
 // ubuntu path (保持原有路径结构，但不再使用 proot-distro)
 // ubuntu path (keep original path structure, but no longer use proot-distro)
@@ -408,42 +416,42 @@ login_ubuntu(){
   if [ -z "$COMMAND_TO_EXEC" ]; then
     COMMAND_TO_EXEC="/bin/bash -il"
   fi
-  
+
   # Setup fake sysdata to fix Android system information retrieval errors
   setup_fake_sysdata
-  
+
   # 构建动态的 bind mount 参数，只在文件不存在时挂载假文件
   BIND_ARGS=""
-  
+
   # 检查并添加假 proc 文件挂载（只在真实文件不可访问时）
   if [ ! -r /proc/loadavg ] || [ ! -s /proc/loadavg ]; then
     BIND_ARGS="$BIND_ARGS -b $UBUNTU_PATH/proc/.loadavg:/proc/loadavg"
   fi
-  
+
   if [ ! -r /proc/stat ] || [ ! -s /proc/stat ]; then
     BIND_ARGS="$BIND_ARGS -b $UBUNTU_PATH/proc/.stat:/proc/stat"
   fi
-  
+
   if [ ! -r /proc/uptime ] || [ ! -s /proc/uptime ]; then
     BIND_ARGS="$BIND_ARGS -b $UBUNTU_PATH/proc/.uptime:/proc/uptime"
   fi
-  
+
   if [ ! -r /proc/version ] || [ ! -s /proc/version ]; then
     BIND_ARGS="$BIND_ARGS -b $UBUNTU_PATH/proc/.version:/proc/version"
   fi
-  
+
   if [ ! -r /proc/vmstat ] || [ ! -s /proc/vmstat ]; then
     BIND_ARGS="$BIND_ARGS -b $UBUNTU_PATH/proc/.vmstat:/proc/vmstat"
   fi
-  
+
   if [ ! -r /proc/sys/kernel/cap_last_cap ] || [ ! -s /proc/sys/kernel/cap_last_cap ]; then
     BIND_ARGS="$BIND_ARGS -b $UBUNTU_PATH/proc/.sysctl_entry_cap_last_cap:/proc/sys/kernel/cap_last_cap"
   fi
-  
+
   if [ ! -r /proc/sys/fs/inotify/max_user_watches ] || [ ! -s /proc/sys/fs/inotify/max_user_watches ]; then
     BIND_ARGS="$BIND_ARGS -b $UBUNTU_PATH/proc/.sysctl_inotify_max_user_watches:/proc/sys/fs/inotify/max_user_watches"
   fi
-  
+
   # 使用 proot 直接进入解压的 Ubuntu 根文件系统。
   # - 清理并设置 PATH，避免继承宿主 PATH 造成命令找不到或混用 busybox。
   # - 绑定常见伪文件系统与外部存储，保障交互和软件包管理工作正常。
@@ -489,61 +497,66 @@ login_ubuntu(){
 }
 ''';
 
-String copyFiles = r'''
+// 生成 copyFiles 脚本，需要传入当前版本号
+// Generate copyFiles script with current version
+String getCopyFilesScript(String currentVersion) {
+  return '''
 copy_files(){
-  mkdir -p "$UBUNTU_PATH/root"
+  mkdir -p "\$UBUNTU_PATH/root"
 
-  # 当前版本号（来自 Java/Kotlin Config）
-  CURRENT_VERSION="''' +
-    Config.versionName +
-    r'''"
+  # 当前版本号（从 pubspec.yaml 通过 PackageInfo 获取）
+  CURRENT_VERSION="$currentVersion"
 
   # 初始化标志
   SHOULD_COPY=1
   EXISTING_VERSION=""
 
   # 检查旧脚本是否存在并提取版本
-  if [ -f "$UBUNTU_PATH/root/astrbot-startup.sh" ]; then
-    EXISTING_VERSION=$(grep '^ASTRBOT_APP_VERSION=' "$UBUNTU_PATH/root/astrbot-startup.sh" 2>/dev/null | cut -d'"' -f2)
+  if [ -f "\$UBUNTU_PATH/root/astrbot-startup.sh" ]; then
+    EXISTING_VERSION=\$(grep '^ASTRBOT_APP_VERSION=' "\$UBUNTU_PATH/root/astrbot-startup.sh" 2>/dev/null | cut -d'"' -f2)
   fi
 
   # 判断是否需要复制
-  if [ "$EXISTING_VERSION" = "$CURRENT_VERSION" ]; then
+  if [ "\$EXISTING_VERSION" = "\$CURRENT_VERSION" ]; then
     SHOULD_COPY=0
   fi
 
-  if [ "$SHOULD_COPY" -eq 1 ]; then
+  if [ "\$SHOULD_COPY" -eq 1 ]; then
     # 提取旧脚本的完整 CUSTOM_GIT_CLONE 行(保留原始格式)
-    OLD_GIT_CLONE_LINE=$(grep '^CUSTOM_GIT_CLONE=' "$UBUNTU_PATH/root/astrbot-startup.sh" 2>/dev/null)
+    OLD_GIT_CLONE_LINE=\$(grep '^CUSTOM_GIT_CLONE=' "\$UBUNTU_PATH/root/astrbot-startup.sh" 2>/dev/null)
 
     # 复制新启动脚本
-    cp ~/astrbot-startup.sh "$UBUNTU_PATH/root/astrbot-startup.sh"
+    cp ~/astrbot-startup.sh "\$UBUNTU_PATH/root/astrbot-startup.sh"
 
     # 如果旧脚本有自定义 Git Clone 配置(非空值),则替换新脚本中的默认值
-    if [ -n "$OLD_GIT_CLONE_LINE" ] && ! echo "$OLD_GIT_CLONE_LINE" | grep -q '=""$'; then
+    if [ -n "\$OLD_GIT_CLONE_LINE" ] && ! echo "\$OLD_GIT_CLONE_LINE" | grep -q '=""\$'; then
       # 直接替换整行,保持用户原始配置
-      sed -i "s|^CUSTOM_GIT_CLONE=.*|$OLD_GIT_CLONE_LINE|" "$UBUNTU_PATH/root/astrbot-startup.sh"
-      echo "启动脚本版本不一致(现有: $EXISTING_VERSION, 当前: $CURRENT_VERSION)，已更新启动脚本"
+      sed -i "s|^CUSTOM_GIT_CLONE=.*|\$OLD_GIT_CLONE_LINE|" "\$UBUNTU_PATH/root/astrbot-startup.sh"
+      echo "启动脚本版本不一致(现有: \$EXISTING_VERSION, 当前: \$CURRENT_VERSION)，已更新启动脚本"
       echo "✓ 已保留自定义 Git Clone 配置"
     else
-      echo "启动脚本版本不一致(现有: $EXISTING_VERSION, 当前: $CURRENT_VERSION)，已更新启动脚本"
+      echo "启动脚本版本不一致(现有: \$EXISTING_VERSION, 当前: \$CURRENT_VERSION)，已更新启动脚本"
     fi
   else
-    echo -e "\033[32m启动脚本版本一致($CURRENT_VERSION)，无需更新\033[0m"
+    echo -e "\\033[32m启动脚本版本一致(\$CURRENT_VERSION)，无需更新\\033[0m"
   fi
 
   # cmd_config.json 每次都复制（保持原有逻辑）
-  cp ~/cmd_config.json "$UBUNTU_PATH/root/cmd_config.json"
+  cp ~/cmd_config.json "\$UBUNTU_PATH/root/cmd_config.json"
 }
 ''';
+}
 
-String commonScript = '''
+// 生成完整的通用脚本，需要传入当前版本号
+// Generate common script with current version
+String getCommonScript(String currentVersion) {
+  return '''
 $common
 $changeUbuntuNobleSource
 $installUbuntu
 $setupFakeSysdata
 $loginUbuntu
-$copyFiles
+${getCopyFilesScript(currentVersion)}
 clear_lines
 start_astrbot(){
   bump_progress
@@ -555,3 +568,4 @@ start_astrbot(){
   login_ubuntu "export TMPDIR='${RuntimeEnvir.tmpPath}'; export L_NOT_INSTALLED='${S.current.uninstalled}'; export L_INSTALLING='${S.current.installing}'; export L_INSTALLED='${S.current.installed}'; chmod +x /root/astrbot-startup.sh; bash /root/astrbot-startup.sh"
 }
 ''';
+}
