@@ -61,7 +61,8 @@ class TerminalTabManager extends GetxController {
   /// 添加新的系统终端标签页
   Future<void> addSystemTerminalTab() async {
     try {
-      final newIndex = tabs.where((t) => t.type == TerminalTabType.system).length + 1;
+      final newIndex =
+          tabs.where((t) => t.type == TerminalTabType.system).length + 1;
       final tabId = 'system_${DateTime.now().millisecondsSinceEpoch}';
 
       // 创建新的终端实例
@@ -75,7 +76,10 @@ class TerminalTabManager extends GetxController {
         columns: newTerminal.viewWidth,
       );
 
-      // 连接终端的 onResize 和 onOutput 事件
+      // 标志：是否已经创建了标签页
+      var tabCreated = false;
+
+      // 连接终端的 onResize 和 onOutput 事件（需要在监听输出前就连接好）
       newTerminal.onResize = (width, height, pixelWidth, pixelHeight) {
         newPty.resize(height, width);
       };
@@ -84,75 +88,51 @@ class TerminalTabManager extends GetxController {
         newPty.writeString(data);
       };
 
-      // 监听PTY输出并写入终端
-      // 使用StringBuffer累积输出，直到检测到提示符
-      final outputBuffer = StringBuffer();
-      var loginCompleted = false;
-
+      // 监听PTY输出，等待登录完成后再创建标签页
       newPty.output
           .cast<List<int>>()
           .transform(const Utf8Decoder(allowMalformed: true))
           .listen((event) {
-        // 如果登录还未完成
-        if (!loginCompleted) {
-          outputBuffer.write(event);
-          final fullOutput = outputBuffer.toString();
+        // 检测是否包含 root@localhost 提示符
+        if (!tabCreated && event.contains('root@localhost')) {
+          tabCreated = true;
 
-          // 检测是否包含 root@localhost 提示符，表示登录完成
-          if (fullOutput.contains('root@localhost')) {
-            loginCompleted = true;
+          // 创建新标签页
+          final newTab = TerminalTab(
+            id: tabId,
+            title: '终端 $newIndex',
+            type: TerminalTabType.system,
+            terminal: newTerminal,
+            pty: newPty,
+            isActive: false,
+          );
 
-            // 提取提示符及其后的内容（从最后一个换行符开始）
-            final lines = fullOutput.split('\n');
-            String promptLine = '';
-
-            // 从后往前找到包含 root@localhost 的行
-            for (int i = lines.length - 1; i >= 0; i--) {
-              if (lines[i].contains('root@localhost')) {
-                promptLine = lines[i];
-                break;
-              }
-            }
-
-            // 清空终端并只显示提示符
-            newTerminal.buffer.clear();
-            newTerminal.buffer.setCursor(0, 0);
-            if (promptLine.isNotEmpty) {
-              newTerminal.write('$promptLine\r\n');
-            }
+          // 将所有现有标签页设为非激活状态
+          for (var tab in tabs) {
+            tab.isActive = false;
           }
-          return;
+
+          // 添加新标签页并激活
+          tabs.add(newTab);
+          newTab.isActive = true;
+          activeTabIndex.value = tabs.length - 1;
+
+          Log.i('添加新系统终端标签页: ${newTab.title} (ID: ${newTab.id})',
+              tag: 'TerminalTabManager');
+          // 不要 return，继续处理后续输出
         }
 
-        // 登录完成后，正常输出所有内容
-        newTerminal.write(event);
+        // 标签页创建后，正常输出所有内容
+        if (tabCreated) {
+          newTerminal.write(event);
+        }
+        // 标签页创建前，不输出任何内容（跳过登录过程的输出）
       });
 
-      // 登录到ubuntu容器，将stderr重定向到/dev/null以隐藏groups错误
-      final command = 'source ${RuntimeEnvir.homePath}/common.sh\nlogin_ubuntu "bash" 2>/dev/null\n';
+      // 登录到ubuntu容器
+      final command =
+          'source ${RuntimeEnvir.homePath}/common.sh\nlogin_ubuntu "bash" \n';
       newPty.writeString(command);
-
-      // 创建新标签页
-      final newTab = TerminalTab(
-        id: tabId,
-        title: '终端 $newIndex',
-        type: TerminalTabType.system,
-        terminal: newTerminal,
-        pty: newPty,
-        isActive: false,
-      );
-
-      // 将所有现有标签页设为非激活状态
-      for (var tab in tabs) {
-        tab.isActive = false;
-      }
-
-      // 添加新标签页并激活
-      tabs.add(newTab);
-      newTab.isActive = true;
-      activeTabIndex.value = tabs.length - 1;
-
-      Log.i('添加新系统终端标签页: ${newTab.title} (ID: ${newTab.id})', tag: 'TerminalTabManager');
     } catch (e) {
       Log.e('添加系统终端标签页失败: $e', tag: 'TerminalTabManager');
       Get.snackbar('错误', '创建终端失败: $e');
@@ -171,7 +151,8 @@ class TerminalTabManager extends GetxController {
       tabs[index].isActive = true;
       activeTabIndex.value = index;
 
-      Log.i('切换到标签页: ${tabs[index].title} (索引: $index)', tag: 'TerminalTabManager');
+      Log.i('切换到标签页: ${tabs[index].title} (索引: $index)',
+          tag: 'TerminalTabManager');
     }
   }
 
