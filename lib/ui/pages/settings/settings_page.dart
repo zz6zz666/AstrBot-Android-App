@@ -140,9 +140,7 @@ class _SettingsPageState extends State<SettingsPage> {
         'https://ghfast.top/https://api.github.com/repos/zz6zz666/AstrBot-Android-App/releases/latest',
         'https://gh-proxy.com/https://api.github.com/repos/zz6zz666/AstrBot-Android-App/releases/latest',
         'https://mirror.ghproxy.com/https://api.github.com/repos/zz6zz666/AstrBot-Android-App/releases/latest',
-        'https://raw.gitmirror.com/https://api.github.com/repos/zz6zz666/AstrBot-Android-App/releases/latest',
         'https://hub.gitmirror.com/https://api.github.com/repos/zz6zz666/AstrBot-Android-App/releases/latest',
-        'https://github.moeyy.xyz/https://api.github.com/repos/zz6zz666/AstrBot-Android-App/releases/latest',
         'https://api.github.com/repos/zz6zz666/AstrBot-Android-App/releases/latest',
       ];
 
@@ -302,31 +300,46 @@ class _SettingsPageState extends State<SettingsPage> {
 
   // 显示下载源选择对话框
   void _showDownloadSourceDialog(Map<String, dynamic> releaseData) {
-    final assets = releaseData['assets'] as List?;
-
-    // 如果还没有保存原始URL，从releaseData中获取
+    // 如果还没有保存原始URL，从releaseData中构造
     if (_originalDownloadUrl == null) {
-      // 查找APK文件的原始GitHub下载URL
-      if (assets != null) {
-        for (final asset in assets) {
-          final name = asset['name'] as String? ?? '';
-          if (name.endsWith('.apk')) {
-            _originalDownloadUrl = asset['browser_download_url'] as String?;
-            break;
-          }
+      final assets = releaseData['assets'] as List?;
+      final tagName = releaseData['tag_name'] as String?;
+
+      if (tagName == null || assets == null) {
+        Get.snackbar(
+          '下载失败',
+          '未找到版本信息',
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: Colors.red,
+          colorText: Colors.white,
+        );
+        return;
+      }
+
+      // 查找APK文件名
+      String? apkFileName;
+      for (final asset in assets) {
+        final name = asset['name'] as String? ?? '';
+        if (name.endsWith('.apk')) {
+          apkFileName = name;
+          break;
         }
       }
-    }
 
-    if (_originalDownloadUrl == null) {
-      Get.snackbar(
-        '下载失败',
-        '未找到可下载的APK文件',
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.red,
-        colorText: Colors.white,
-      );
-      return;
+      if (apkFileName == null) {
+        Get.snackbar(
+          '下载失败',
+          '未找到可下载的APK文件',
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: Colors.red,
+          colorText: Colors.white,
+        );
+        return;
+      }
+
+      // 直接构造GitHub原始下载链接，避免使用可能被镜像站污染的URL
+      _originalDownloadUrl =
+          'https://github.com/zz6zz666/AstrBot-Android-App/releases/download/$tagName/$apkFileName';
     }
 
     // 使用原始URL构建各个镜像源的下载链接
@@ -350,16 +363,6 @@ class _SettingsPageState extends State<SettingsPage> {
         'name': 'Hub Gitmirror镜像下载',
         'icon': Icons.speed,
         'url': 'https://hub.gitmirror.com/$_originalDownloadUrl',
-      },
-      {
-        'name': 'Moeyy镜像下载',
-        'icon': Icons.speed,
-        'url': 'https://github.moeyy.xyz/$_originalDownloadUrl',
-      },
-      {
-        'name': 'Raw Gitmirror镜像下载',
-        'icon': Icons.speed,
-        'url': 'https://raw.gitmirror.com/$_originalDownloadUrl',
       },
       {
         'name': 'GitHub原始链接',
