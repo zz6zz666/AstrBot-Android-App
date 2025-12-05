@@ -59,7 +59,7 @@ android {
             }
         }
         debug {
-            signingConfig signingConfigs.debug
+            signingConfig hasKeystoreFile ? signingConfigs.release : signingConfigs.debug
             minifyEnabled false
             shrinkResources false
             // 禁用对特定原生库的strip操作，避免处理错误

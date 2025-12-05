@@ -34,6 +34,9 @@ class _SettingsPageState extends State<SettingsPage> {
   bool _isBatteryOptimizationIgnored = false;
   final HomeController homeController = Get.find<HomeController>();
 
+  // 存储从GitHub API获取的原始下载URL
+  String? _originalDownloadUrl;
+
   @override
   void initState() {
     super.initState();
@@ -119,6 +122,9 @@ class _SettingsPageState extends State<SettingsPage> {
   // 检查更新
   Future<void> _checkForUpdates() async {
     try {
+      // 每次检查更新时重置原始URL
+      _originalDownloadUrl = null;
+
       // 显示加载提示
       Get.dialog(
         const Center(child: CircularProgressIndicator()),
@@ -220,35 +226,76 @@ class _SettingsPageState extends State<SettingsPage> {
   void _showUpdateDialog(
       String version, String releaseNotes, Map<String, dynamic> releaseData) {
     Get.dialog(
-      AlertDialog(
-        title: Text('发现新版本 $version'),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                '发行日志:',
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+      Dialog(
+        child: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Row(
+                children: [
+                  Text(
+                    '发现新版本 $version',
+                    style: const TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const Spacer(),
+                  IconButton(
+                    icon: const Icon(Icons.close),
+                    onPressed: () => Get.back(),
+                  ),
+                ],
               ),
-              const SizedBox(height: 8),
-              Text(releaseNotes),
-            ],
-          ),
+            ),
+            const Divider(height: 1),
+            Expanded(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(16.0),
+                child: MarkdownBody(
+                  data: releaseNotes,
+                  styleSheet: MarkdownStyleSheet(
+                    h1: const TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                    ),
+                    h2: const TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                    ),
+                    h3: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                    p: const TextStyle(fontSize: 14),
+                    listBullet: const TextStyle(fontSize: 14),
+                  ),
+                ),
+              ),
+            ),
+            const Divider(height: 1),
+            Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  TextButton(
+                    onPressed: () => Get.back(),
+                    child: const Text('关闭'),
+                  ),
+                  const SizedBox(width: 8),
+                  ElevatedButton(
+                    onPressed: () {
+                      Get.back();
+                      _showDownloadSourceDialog(releaseData);
+                    },
+                    child: const Text('去下载'),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Get.back(),
-            child: const Text('关闭'),
-          ),
-          TextButton(
-            onPressed: () {
-              Get.back();
-              _showDownloadSourceDialog(releaseData);
-            },
-            child: const Text('去下载'),
-          ),
-        ],
       ),
     );
   }
@@ -256,20 +303,22 @@ class _SettingsPageState extends State<SettingsPage> {
   // 显示下载源选择对话框
   void _showDownloadSourceDialog(Map<String, dynamic> releaseData) {
     final assets = releaseData['assets'] as List?;
-    String? downloadUrl;
 
-    // 查找APK文件
-    if (assets != null) {
-      for (final asset in assets) {
-        final name = asset['name'] as String? ?? '';
-        if (name.endsWith('.apk')) {
-          downloadUrl = asset['browser_download_url'] as String?;
-          break;
+    // 如果还没有保存原始URL，从releaseData中获取
+    if (_originalDownloadUrl == null) {
+      // 查找APK文件的原始GitHub下载URL
+      if (assets != null) {
+        for (final asset in assets) {
+          final name = asset['name'] as String? ?? '';
+          if (name.endsWith('.apk')) {
+            _originalDownloadUrl = asset['browser_download_url'] as String?;
+            break;
+          }
         }
       }
     }
 
-    if (downloadUrl == null) {
+    if (_originalDownloadUrl == null) {
       Get.snackbar(
         '下载失败',
         '未找到可下载的APK文件',
@@ -280,63 +329,42 @@ class _SettingsPageState extends State<SettingsPage> {
       return;
     }
 
-    // 移除检查更新时使用的镜像源前缀，恢复为原始 GitHub URL
-    // 可能的格式:
-    // - https://gh-proxy.com/https://github.com/...
-    // - https://mirror.ghproxy.com/https://github.com/...
-    // - https://github.com/... (已经是原始链接)
-    String cleanUrl = downloadUrl;
-    final mirrorPrefixes = [
-      'https://gh-proxy.com/',
-      'https://mirror.ghproxy.com/',
-      'https://raw.gitmirror.com/',
-      'https://hub.gitmirror.com/',
-      'https://github.moeyy.xyz/',
-      'https://ghfast.top/',
-    ];
-
-    for (final prefix in mirrorPrefixes) {
-      if (cleanUrl.startsWith(prefix)) {
-        cleanUrl = cleanUrl.substring(prefix.length);
-        break;
-      }
-    }
-
+    // 使用原始URL构建各个镜像源的下载链接
     final sources = [
       {
         'name': 'Ghfast镜像下载',
         'icon': Icons.speed,
-        'url': 'https://ghfast.top/$cleanUrl',
+        'url': 'https://ghfast.top/$_originalDownloadUrl',
       },
       {
         'name': 'GHProxy镜像下载',
         'icon': Icons.speed,
-        'url': 'https://gh-proxy.com/$cleanUrl',
+        'url': 'https://gh-proxy.com/$_originalDownloadUrl',
       },
       {
         'name': 'Mirror GHProxy镜像下载',
         'icon': Icons.speed,
-        'url': 'https://mirror.ghproxy.com/$cleanUrl',
+        'url': 'https://mirror.ghproxy.com/$_originalDownloadUrl',
       },
       {
         'name': 'Hub Gitmirror镜像下载',
         'icon': Icons.speed,
-        'url': 'https://hub.gitmirror.com/$cleanUrl',
+        'url': 'https://hub.gitmirror.com/$_originalDownloadUrl',
       },
       {
         'name': 'Moeyy镜像下载',
         'icon': Icons.speed,
-        'url': 'https://github.moeyy.xyz/$cleanUrl',
+        'url': 'https://github.moeyy.xyz/$_originalDownloadUrl',
       },
       {
         'name': 'Raw Gitmirror镜像下载',
         'icon': Icons.speed,
-        'url': 'https://raw.gitmirror.com/$cleanUrl',
+        'url': 'https://raw.gitmirror.com/$_originalDownloadUrl',
       },
       {
         'name': 'GitHub原始链接',
         'icon': Icons.cloud_download,
-        'url': cleanUrl,
+        'url': _originalDownloadUrl!,
         'description': '直接从GitHub官方服务器下载，速度可能较慢',
       },
     ];
