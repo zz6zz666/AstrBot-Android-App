@@ -503,8 +503,7 @@ class HomeController extends GetxController {
         currentProgress = content;
 
         // 当进度到达 "Napcat 已安装" 时，启动 NapCat 终端
-        if (content.contains('Napcat') &&
-            content.contains(S.current.installed)) {
+        if (content.contains('Napcat ${S.current.installed}')) {
           napcatTerminal?.writeString('$command\n');
           bumpProgress();
           Log.i('检测到 Napcat 已安装，启动 NapCat 终端', tag: 'AstrBot');
@@ -616,7 +615,6 @@ class HomeController extends GetxController {
     bumpProgress();
 
     initQrcodeListener();
-    napcatTerminal?.writeString('$command\n');
 
     startAstrBot(pseudoTerminal!);
   }
