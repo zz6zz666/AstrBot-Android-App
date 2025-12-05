@@ -4,12 +4,11 @@ import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 import 'package:webview_flutter_android/webview_flutter_android.dart';
-import 'package:xterm/xterm.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../controllers/terminal_controller.dart';
 import '../settings/settings_page.dart';
-import '../terminal/terminal_theme.dart';
+import '../terminal/terminal_tab_view.dart';
 import '../../navbar/bottom_nav_bar.dart';
 import '../../../core/services/password_manager.dart';
 
@@ -678,13 +677,8 @@ class _WebViewPageState extends State<WebViewPage> {
               children: [
                 ...pages,
 
-                // 4. 终端页面
-                TerminalView(
-                  homeController.terminal,
-                  readOnly: true,
-                  backgroundOpacity: 1,
-                  theme: ManjaroTerminalTheme(),
-                ),
+                // 4. 终端页面（使用新的标签页视图）
+                const TerminalTabView(),
 
                 // 5. 软件设置页面
                 SettingsPage(

@@ -13,8 +13,11 @@ import '../../generated/l10n.dart';
 import '../../core/constants/scripts.dart';
 import '../../core/utils/file_utils.dart';
 import '../routes/app_routes.dart';
+import 'terminal_tab_manager.dart';
 
 class HomeController extends GetxController {
+  // 终端标签页管理器
+  late final TerminalTabManager terminalTabManager;
   // bool vsCodeStaring = false;
   SettingNode privacySetting = 'privacy'.setting;
   SettingNode napCatWebUiEnabled = 'napcat_webui_enabled'.setting;
@@ -628,6 +631,9 @@ class HomeController extends GetxController {
   void onInit() {
     super.onInit();
 
+    // 初始化终端标签页管理器
+    terminalTabManager = TerminalTabManager();
+
     // 初始化 NapCat WebUI 启用状态
     napCatWebUiEnabledRx.value = napCatWebUiEnabled.get() ?? false;
 
@@ -651,6 +657,12 @@ class HomeController extends GetxController {
 
       // 加载并启动 AstrBot
       loadAstrBot();
+
+      // 在终端创建完成后初始化固定标签页
+      // 等待terminal创建完成
+      Future.delayed(const Duration(milliseconds: 500), () {
+        terminalTabManager.initializeFixedTab(terminal);
+      });
     });
 
     // 监听应用生命周期状态变化
