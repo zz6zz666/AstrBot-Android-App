@@ -156,16 +156,10 @@ install_napcat(){
     
     apt --fix-broken install -y
 
-    # 备份数据目录（如果存在）
-    if [ -d "$HOME/napcat/data" ]; then
-      echo "备份 NapCat 数据目录..."
-      cp -r "$HOME/napcat/data" "$HOME/napcat_data_backup"
-    fi
-    
-    # 备份缓存目录（如果存在）
-    if [ -d "$HOME/napcat/cache" ]; then
-      echo "备份 NapCat 缓存目录..."
-      cp -r "$HOME/napcat/cache" "$HOME/napcat_cache_backup"
+    # 备份配置目录（如果存在）
+    if [ -d "$HOME/napcat/config" ]; then
+      echo "备份 NapCat 配置目录..."
+      cp -r "$HOME/napcat/config" "$HOME/napcat_config_backup"
     fi
     
     rm -rf $HOME/napcat
@@ -178,20 +172,12 @@ install_napcat(){
     fi
     bash napcat.sh
     
-    # 恢复数据目录
-    if [ -d "$HOME/napcat_data_backup" ]; then
-      echo "恢复 NapCat 数据目录..."
-      mkdir -p "$HOME/napcat/data"
-      cp -r "$HOME/napcat_data_backup"/* "$HOME/napcat/data/"
-      rm -rf "$HOME/napcat_data_backup"
-    fi
-    
-    # 恢复缓存目录
-    if [ -d "$HOME/napcat_cache_backup" ]; then
-      echo "恢复 NapCat 缓存目录..."
-      mkdir -p "$HOME/napcat/cache"
-      cp -r "$HOME/napcat_cache_backup"/* "$HOME/napcat/cache/"
-      rm -rf "$HOME/napcat_cache_backup"
+    # 恢复配置目录
+    if [ -d "$HOME/napcat_config_backup" ]; then
+      echo "恢复 NapCat 配置目录..."
+      mkdir -p "$HOME/napcat/config"
+      cp -r "$HOME/napcat_config_backup"/* "$HOME/napcat/config/"
+      rm -rf "$HOME/napcat_config_backup"
     fi
     
   # 只在配置文件不存在时写入默认配置

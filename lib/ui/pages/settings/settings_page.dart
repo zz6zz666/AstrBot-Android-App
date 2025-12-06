@@ -138,7 +138,8 @@ class _SettingsPageState extends State<SettingsPage> {
 
       // 使用镜像源获取最新版本信息
       final mirrors = [
-        ...Config.githubApiMirrors.map((mirror) => '$mirror/${Config.githubApi}${Config.githubReleasesPath}'),
+        ...Config.githubApiMirrors.map((mirror) =>
+            '$mirror/${Config.githubApi}${Config.githubReleasesPath}'),
         '${Config.githubApi}${Config.githubReleasesPath}',
       ];
 
@@ -343,10 +344,11 @@ class _SettingsPageState extends State<SettingsPage> {
     // 使用原始URL构建各个镜像源的下载链接
     final sources = [
       ...Config.downloadMirrors.map((mirror) => {
-        'name': mirror['name']!,
-        'icon': mirror['icon'] == 'speed' ? Icons.speed : Icons.cloud_download,
-        'url': '${mirror['url']}/$_originalDownloadUrl',
-      }),
+            'name': mirror['name']!,
+            'icon':
+                mirror['icon'] == 'speed' ? Icons.speed : Icons.cloud_download,
+            'url': '${mirror['url']}/$_originalDownloadUrl',
+          }),
       {
         'name': 'GitHub原始链接',
         'icon': Icons.cloud_download,
@@ -1229,7 +1231,7 @@ class _SettingsPageState extends State<SettingsPage> {
             final confirm = await Get.dialog<bool>(
               AlertDialog(
                 title: const Text('确认重新安装'),
-                content: const Text('此操作将删除 NapcatQQ 安装文件（保留登录数据）并重新安装，确定继续吗？'),
+                content: const Text('此操作将删除 NapcatQQ 安装文件（保留配置文件）并重新安装，确定继续吗？'),
                 actions: [
                   TextButton(
                     onPressed: () => Get.back(result: false),
