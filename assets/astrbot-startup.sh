@@ -253,8 +253,8 @@ install_astrbot(){
       LATEST_TAG=$(git ls-remote --tags --sort='-v:refname' ${target_proxy:+${target_proxy}/}https://github.com/AstrBotDevs/AstrBot.git | head -n 1 | awk -F'/' '{print $3}')
 
       if [ -z "$LATEST_TAG" ]; then
-        echo "警告: 无法获取最新 tag，使用 main 分支"
-        CLONE_BRANCH="main"
+        echo "警告: 无法获取最新 tag，使用 master 分支"
+        CLONE_BRANCH="master"
       else
         echo "最新版本: $LATEST_TAG"
         CLONE_BRANCH="$LATEST_TAG"

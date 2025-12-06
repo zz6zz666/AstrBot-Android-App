@@ -5,9 +5,11 @@ import android.content.Context;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
+import android.os.Handler;
 import android.view.ViewGroup;
 import android.webkit.ValueCallback;
 import android.webkit.WebChromeClient;
+import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -30,6 +32,10 @@ public class MainActivity extends FragmentActivity {
     // 文件选择器相关
     private static final int FILE_CHOOSER_REQUEST_CODE = 1;
     private ValueCallback<Uri[]> filePathCallback;
+
+    // 双击返回退出相关
+    private boolean doubleBackToExitPressedOnce = false;
+    private static final int DOUBLE_BACK_INTERVAL = 2000; // 2秒内连续按返回键
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -119,8 +125,22 @@ public class MainActivity extends FragmentActivity {
 
     @Override
     public void onBackPressed() {
-        // 禁用所有返回操作，不执行任何动作
-        // Disable all back button operations
+        // 实现双击返回退出到桌面，但不传递给Flutter层
+        if (doubleBackToExitPressedOnce) {
+            // 第二次按返回键，移动到后台（返回桌面）
+            moveTaskToBack(true);
+            return;
+        }
+
+        // 第一次按返回键，显示提示
+        this.doubleBackToExitPressedOnce = true;
+        Toast.makeText(this, "再按一次返回桌面", Toast.LENGTH_SHORT).show();
+
+        // 2秒后重置标志
+        new Handler().postDelayed(() -> doubleBackToExitPressedOnce = false, DOUBLE_BACK_INTERVAL);
+
+        // 不调用 super.onBackPressed() 和 flutterFragment.onBackPressed()
+        // 确保返回事件不会传递给 Flutter 层
     }
 
     @Override
