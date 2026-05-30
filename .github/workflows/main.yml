@@ -32,7 +32,9 @@ jobs:
           sed -i 's/path: ^1.9.1/path: ^1.9.0/' pubspec.yaml
 
       - name: Fix AGP newDsl
-        run: printf '\nandroid.newDsl=false' >> android/gradle.properties
+        run: |
+          echo "" >> android/gradle.properties
+          echo "android.newDsl=false" >> android/gradle.properties
 
       - name: Install dependencies
         run: flutter pub get
