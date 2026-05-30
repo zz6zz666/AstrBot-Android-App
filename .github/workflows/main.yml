@@ -1,10 +1,10 @@
 name: Build APK
 
-于:
+on:
   push:
-    分支: [main, master, release]
+    branches: [main, master, release]
   pull_request:
-    分支: [main, master]
+    branches: [main, master]
   workflow_dispatch:
 
 jobs:
