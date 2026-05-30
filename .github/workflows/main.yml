@@ -36,6 +36,9 @@ jobs:
           echo "" >> android/gradle.properties
           echo "android.newDsl=false" >> android/gradle.properties
 
+      - name: Verify gradle.properties
+        run: cat android/gradle.properties
+
       - name: Install dependencies
         run: flutter pub get
 
