@@ -401,7 +401,15 @@ class HomeController extends GetxController {
         _qrcodeSubscription = null; // 置空标记已取消
       }
 
-      // 检测指令3处理登录错误
+      // 检测指令3napcat启动完成（快速登录无二维码）
+      if (event.contains('监听协议适配器初始化完成') && !_isQrcodeProcessed) {
+        _isQrcodeProcessed = true;
+        _checkAndNavigateToWebview();
+        await _qrcodeSubscription?.cancel();
+        _qrcodeSubscription = null;
+      }
+
+      // 检测指令4处理登录错误
       if (event.contains('Login Error') && _isQrcodeShowing.value) {
         // 关闭二维码对话框
         if (_qrcodeDialog != null) {
