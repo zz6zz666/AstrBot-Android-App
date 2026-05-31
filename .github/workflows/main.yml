@@ -27,19 +27,6 @@ jobs:
           channel: 'stable'
           cache: true
 
-      - name: Fix path dep for CI
-        run: |
-          sed -i 's/path: ^1.9.1/path: ^1.9.0/' pubspec.yaml
-
-      - name: Fix AGP version
-        run: |
-          sed -i "s/com.android.application version '8.3.0'/com.android.application version '8.7.3'/" android/settings.gradle
-          echo "" >> android/gradle.properties
-          echo "android.newDsl=false" >> android/gradle.properties
-
-      - name: Verify gradle.properties
-        run: cat android/gradle.properties
-
       - name: Install dependencies
         run: flutter pub get
 
