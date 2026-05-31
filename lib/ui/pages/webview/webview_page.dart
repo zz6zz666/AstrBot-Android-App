@@ -168,9 +168,6 @@ class _WebViewPageState extends State<WebViewPage> {
       // 允许访问本地文件和内容
       androidController.setAllowFileAccess(true);
       androidController.setAllowContentAccess(true);
-      // 原生禁用缩放，代替JS注入方式
-      androidController.setBuiltInZoomControls(false);
-      androidController.setDisplayZoomControls(false);
       // 设置文件选择回调
       androidController.setOnShowFileSelector(_handleFileSelection);
     }
@@ -241,9 +238,6 @@ class _WebViewPageState extends State<WebViewPage> {
       // 允许访问本地文件和内容
       androidController.setAllowFileAccess(true);
       androidController.setAllowContentAccess(true);
-      // 原生禁用缩放，代替JS注入方式
-      androidController.setBuiltInZoomControls(false);
-      androidController.setDisplayZoomControls(false);
       // 设置文件选择回调
       androidController.setOnShowFileSelector(_handleFileSelection);
     }
@@ -296,9 +290,6 @@ class _WebViewPageState extends State<WebViewPage> {
       androidController.setMixedContentMode(MixedContentMode.compatibilityMode);
       androidController.setAllowFileAccess(true);
       androidController.setAllowContentAccess(true);
-      // 原生禁用缩放，代替JS注入方式
-      androidController.setBuiltInZoomControls(false);
-      androidController.setDisplayZoomControls(false);
       // 设置文件选择回调
       androidController.setOnShowFileSelector(_handleFileSelection);
     }
