@@ -60,6 +60,9 @@
             android:name="io.flutter.embedding.android.EnableImpeller"
             android:value="false" />
         <meta-data
+            android:name="io.flutter.embedding.android.EnableHybridComposition"
+            android:value="false" />
+        <meta-data
             android:name="com.astrbot.astrbot_android.ic_launcher"
             android:resource="@mipmap/ic_launcher" />
         
