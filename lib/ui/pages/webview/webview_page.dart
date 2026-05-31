@@ -595,20 +595,14 @@ class _WebViewPageState extends State<WebViewPage> {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
-    return Obx(() {
-      // 检查 NapCat WebUI 是否启用
+    // Obx 只包页面内容，不包 Scaffold 和导航栏
+    final _bodyWidget = Obx(() {
       final bool napCatEnabled = homeController.napCatWebUiEnabledRx.value;
       final customWebViews = homeController.customWebViews;
 
-      // 动态构建页面列表
       final List<Widget> pages = [
-        // 1. AstrBot 配置页面
         WebViewWidget(controller: _astrBotController),
-
-        // 2. NapCat 配置页面（仅在启用时添加）
         if (napCatEnabled) WebViewWidget(controller: _napCatController),
-
-        // 3. 自定义 WebView 页面
         ...List.generate(customWebViews.length, (index) {
           final webview = customWebViews[index];
           final url = webview['url'] ?? '';
@@ -618,17 +612,13 @@ class _WebViewPageState extends State<WebViewPage> {
         }),
       ];
 
-      // 计算设置页的索引（终端页在倒数第二，设置页在最后）
       final int settingsIndex = pages.length + 1;
-      final int currentNavItemCount = pages.length + 2; // 总导航项数量
+      final int currentNavItemCount = pages.length + 2;
 
-      // 最简单的逻辑：导航栏数量变化时，直接锁定焦点到最大值（设置页）
       int validCurrentIndex = _currentIndex;
       if (_previousNavItemCount != 0 && _previousNavItemCount != currentNavItemCount) {
-        // 导航栏数量发生变化，锁定到设置页
         validCurrentIndex = settingsIndex;
         _previousNavItemCount = currentNavItemCount;
-        // 异步更新状态
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (mounted) {
             setState(() {
@@ -637,32 +627,33 @@ class _WebViewPageState extends State<WebViewPage> {
           }
         });
       } else if (_previousNavItemCount == 0) {
-        // 首次加载，记录导航栏数量
         _previousNavItemCount = currentNavItemCount;
       }
 
-      return AnnotatedRegion<SystemUiOverlayStyle>(
-        value: const SystemUiOverlayStyle(
-          statusBarColor: Colors.white,
-          statusBarIconBrightness: Brightness.dark,
-          statusBarBrightness: Brightness.light,
-        ),
-        child: Scaffold(
-          backgroundColor: Colors.white,
-          body: SafeArea(
-            top: true,
-            child: _buildPage(validCurrentIndex, pages),
-          ),
-          bottomNavigationBar: WebViewBottomNavBar(
-            currentIndex: validCurrentIndex,
-            onTap: (index) {
-              setState(() {
-                _currentIndex = index;
-              });
-            },
-          ),
-        ),
-      );
+      return _buildPage(validCurrentIndex, pages);
     });
+
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: const SystemUiOverlayStyle(
+        statusBarColor: Colors.white,
+        statusBarIconBrightness: Brightness.dark,
+        statusBarBrightness: Brightness.light,
+      ),
+      child: Scaffold(
+        backgroundColor: Colors.white,
+        body: SafeArea(
+          top: true,
+          child: _bodyWidget,
+        ),
+        bottomNavigationBar: WebViewBottomNavBar(
+          currentIndex: _currentIndex,
+          onTap: (index) {
+            setState(() {
+              _currentIndex = index;
+            });
+          },
+        ),
+      ),
+    );
   }
 }
