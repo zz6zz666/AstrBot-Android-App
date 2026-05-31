@@ -149,7 +149,6 @@ class _WebViewPageState extends State<WebViewPage> {
           },
           onPageFinished: (String url) {
             _injectClipboardScript(_astrBotController);
-            _disableZoom(_astrBotController);
             _injectPasswordScript(_astrBotController, url);
           },
           onWebResourceError: (WebResourceError error) {
@@ -169,6 +168,9 @@ class _WebViewPageState extends State<WebViewPage> {
       // 允许访问本地文件和内容
       androidController.setAllowFileAccess(true);
       androidController.setAllowContentAccess(true);
+      // 原生禁用缩放，代替JS注入方式
+      androidController.setBuiltInZoomControls(false);
+      androidController.setDisplayZoomControls(false);
       // 设置文件选择回调
       androidController.setOnShowFileSelector(_handleFileSelection);
     }
@@ -205,7 +207,6 @@ class _WebViewPageState extends State<WebViewPage> {
             return NavigationDecision.navigate;
           },
           onPageFinished: (String url) {
-            _disableZoom(_napCatController);
             _injectPasswordScript(_napCatController, url);
           },
           onWebResourceError: (WebResourceError error) {
@@ -240,6 +241,9 @@ class _WebViewPageState extends State<WebViewPage> {
       // 允许访问本地文件和内容
       androidController.setAllowFileAccess(true);
       androidController.setAllowContentAccess(true);
+      // 原生禁用缩放，代替JS注入方式
+      androidController.setBuiltInZoomControls(false);
+      androidController.setDisplayZoomControls(false);
       // 设置文件选择回调
       androidController.setOnShowFileSelector(_handleFileSelection);
     }
@@ -276,7 +280,6 @@ class _WebViewPageState extends State<WebViewPage> {
             return NavigationDecision.navigate;
           },
           onPageFinished: (String pageUrl) {
-            _disableZoom(controller);
             _injectPasswordScript(controller, pageUrl);
           },
           onWebResourceError: (WebResourceError error) {
@@ -293,6 +296,9 @@ class _WebViewPageState extends State<WebViewPage> {
       androidController.setMixedContentMode(MixedContentMode.compatibilityMode);
       androidController.setAllowFileAccess(true);
       androidController.setAllowContentAccess(true);
+      // 原生禁用缩放，代替JS注入方式
+      androidController.setBuiltInZoomControls(false);
+      androidController.setDisplayZoomControls(false);
       // 设置文件选择回调
       androidController.setOnShowFileSelector(_handleFileSelection);
     }
@@ -449,36 +455,18 @@ class _WebViewPageState extends State<WebViewPage> {
     controller.runJavaScript(jsCode);
   }
 
-  void _disableZoom(WebViewController controller) {
-    const String jsCode = '''
-      (function() {
-        var meta = document.querySelector('meta[name="viewport"]');
-        if (meta) {
-          meta.content = 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no';
-        } else {
-          meta = document.createElement('meta');
-          meta.name = 'viewport';
-          meta.content = 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no';
-          document.head.appendChild(meta);
-        }
-
-        // 禁用双击缩放
-        var lastTouchEnd = 0;
-        document.addEventListener('touchend', function(event) {
-          var now = Date.now();
-          if (now - lastTouchEnd <= 300) {
-            event.preventDefault();
-          }
-          lastTouchEnd = now;
-        }, false);
-
-        // 禁用手势缩放
-        document.addEventListener('gesturestart', function(event) {
-          event.preventDefault();
-        }, false);
-      })();
-    ''';
-    controller.runJavaScript(jsCode);
+  // 条件渲染当前页面，切换时销毁不可见的WebView
+  Widget _buildPage(int index, List<Widget> pages) {
+    if (index < pages.length) {
+      return pages[index];
+    } else if (index == pages.length) {
+      return const TerminalTabView();
+    }
+    return SettingsPage(
+      astrBotController: _astrBotController,
+      napCatController: _napCatController,
+      onNavigate: (i) => setState(() => _currentIndex = i),
+    );
   }
 
   Future<void> _getClipboardData(WebViewController controller) async {
@@ -672,26 +660,7 @@ class _WebViewPageState extends State<WebViewPage> {
           backgroundColor: Colors.white,
           body: SafeArea(
             top: true,
-            child: IndexedStack(
-              index: validCurrentIndex,
-              children: [
-                ...pages,
-
-                // 4. 终端页面（使用新的标签页视图）
-                const TerminalTabView(),
-
-                // 5. 软件设置页面
-                SettingsPage(
-                  astrBotController: _astrBotController,
-                  napCatController: _napCatController,
-                  onNavigate: (index) {
-                    setState(() {
-                      _currentIndex = index;
-                    });
-                  },
-                ),
-              ],
-            ),
+            child: _buildPage(validCurrentIndex, pages),
           ),
           bottomNavigationBar: WebViewBottomNavBar(
             currentIndex: validCurrentIndex,
