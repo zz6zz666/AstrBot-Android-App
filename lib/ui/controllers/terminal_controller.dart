@@ -402,7 +402,7 @@ class HomeController extends GetxController {
       }
 
       // 检测指令3napcat启动完成（快速登录无二维码）
-      if (event.contains('监听协议适配器初始化完成') && !_isQrcodeProcessed) {
+      if (event.contains('协议适配器初始化完成') && !_isQrcodeProcessed) {
         _isQrcodeProcessed = true;
         _checkAndNavigateToWebview();
         await _qrcodeSubscription?.cancel();
